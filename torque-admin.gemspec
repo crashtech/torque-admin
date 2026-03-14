@@ -15,7 +15,7 @@ Gem::Specification.new do |spec|
   spec.license     = 'MIT'
 
   spec.metadata    = {
-    # 'homepage_uri'    => 'https://torque.dev/admin',
+    'homepage_uri'    => 'https://torque.dev/admin',
     "source_code_uri" => 'https://github.com/crashtech/torque-admin',
     'bug_tracker_uri' => 'https://github.com/crashtech/torque-admin/issues',
     'changelog_uri'   => 'https://github.com/crashtech/torque-admin/releases',
