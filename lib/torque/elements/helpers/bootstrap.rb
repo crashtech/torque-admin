@@ -3,8 +3,8 @@
 module Torque
   module Elements
     module Helpers
-      # = Torque Elements \Tailwind Helpers
-      module Tailwind
+      # = Torque Elements \Bootstrap Helpers
+      module Bootstrap
 
       end
     end

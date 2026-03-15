@@ -14,14 +14,14 @@ module Torque
             requested_details = key || ActionView::TemplateDetails::Requested.new(**details)
             cache = key ? @unbound_templates : Concurrent::Map.new
 
-            unbound_templates =
-              cache.compute_if_absent(ActionView::TemplatePath.virtual(name, prefix, partial)) do
-                path = ActionView::TemplatePath.build(name, prefix, partial)
-                unbound_templates_from_path(path)
-              end
+            path = ActionView::TemplatePath.build(name, prefix, partial)
+            cache_key = requested_details.template_source_path || path
+            unbound_templates = cache.compute_if_absent(cache_key.virtual) do
+              unbound_templates_from_path(cache_key)
+            end
 
             filter_and_sort_by_details(unbound_templates, requested_details).map do |unbound_template|
-              unbound_template.bind_prefix(prefix)
+              unbound_template.bind_path(path)
             end
           end
 
@@ -37,21 +37,26 @@ module Torque
             )
           end
 
+          def unbound_templates_from_path(path)
+            return [] if path.name.include?('.')
+
+            paths = template_glob("**/#{escape_entry(path.name.to_s)}*")
+            paths.map { |path| build_unbound_template(path) }
+          end
+
           def filter_and_sort_by_details(templates, requested_details)
             filtered_templates = templates
 
-            if requested_details.template_prefixes.any?
-              filtered_templates = requested_details.template_prefixes.flat_map do |prefix|
+            if (source = requested_details.template_keys&.source).present?
+              filtered_templates = filtered_templates.select { |template| template.virtual_path == source }
+            elsif (prefixes = requested_details.template_keys&.prefixes).present?
+              filtered_templates = prefixes.flat_map do |prefix|
                 prefix = File.join(prefix, '') # Ensure prefix ends with a separator
-                templates.select { |template| template.virtual_path.start_with?(prefix) }
+                filtered_templates.select { |template| template.virtual_path.start_with?(prefix) }
               end
             end
 
             super(filtered_templates.compact, requested_details)
-          end
-
-          def template_glob(glob)
-            super(glob.sub(%r{.*/}, '**/'))
           end
       end
     end

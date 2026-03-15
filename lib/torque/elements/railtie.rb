@@ -15,9 +15,6 @@ module Torque
     class Railtie < ::Rails::Railtie
       config.eager_load_namespaces << Torque::Elements
 
-      # initializer 'torque-elements.directory', after: :add_view_paths do |app|
-      # end
-
       initializer 'torque-elements.action_view_setup' do
         ActiveSupport.on_load(:action_view) do
           ActionView::LogSubscriber.include(LogSubscriber)
@@ -26,7 +23,9 @@ module Torque
           ActionView::TemplateDetails::Requested.prepend(TemplateDetails::Requested)
 
           ActionView::LookupContext::DetailsKey.singleton_class.prepend(Templates::RenderContext::Reloader)
-          ActionView::LookupContext.register_detail(:template_prefixes) { [] }
+
+          ActionView::AbstractRenderer.prepend(Templates::AbstractRenderer)
+          ActionView::LookupContext.prepend(Templates::LookupContext)
         end
       end
     end

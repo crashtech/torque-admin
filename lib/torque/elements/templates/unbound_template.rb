@@ -5,15 +5,12 @@ module Torque
     module Templates
       # = Torque Elements \Unbound Template
       class UnboundTemplate < ActionView::Template
-        MatchAllString = Class.new(String) { def ==(*); true; end }
-        private_constant :MatchAllString
-
         attr_reader :details
 
         undef_method :render
         undef_method :instrument_render_template
 
-        def initialize(*args, details:, virtual_path: nil, **kwargs)
+        def initialize(*args, details:, **kwargs)
           @details = details
           super(*args, details.handler_class, **kwargs,
             format: details.format_or_default,
@@ -21,7 +18,6 @@ module Torque
             locals: nil,
           )
 
-          @virtual_path = MatchAllString.new(virtual_path.to_s)
           @templates = Concurrent::Map.new(initial_capacity: 2)
         end
 
@@ -33,22 +29,20 @@ module Torque
           @details = array.pop
           @templates = Concurrent::Map.new(initial_capacity: 2)
           super(array)
-          @virtual_path = MatchAllString.new(@virtual_path)
         end
 
-        def bind_prefix(prefix)
-          @templates[prefix] ||= begin
-            virtual = File.join(prefix, File.basename(@virtual_path))
+        def bind_path(path)
+          @templates[path.virtual] ||= begin
             extension = @identifier.split('.', 2).last
 
             Template.new(
               nil,
-              File.join(Rails.application.paths['app/views'].first, "#{virtual}.#{extension}"),
+              File.join(Rails.application.paths['app/views'].first, "#{path.virtual}.#{extension}"),
               @handler,
 
               format: @format,
               variant: @variant,
-              virtual_path: virtual,
+              virtual_path: path.virtual,
 
               locals: [],
               template: self,
@@ -72,11 +66,12 @@ module Torque
           "#<#{self.class.name} #{short_identifier} entries=#{@templates.size}>"
         end
 
-        def build_source(view, template)
+        def build_source(view, template, expected_locals = nil)
           controller = view.controller
           context = controller.template_context
 
           # Temporarily remove the request, because it is not supposed to be accessed during building a template
+          # TODO: This is likely to change to a better management way of inaccessible things
           old_request = controller.request
           controller.instance_variable_set(:@_request, nil)
 
@@ -84,9 +79,8 @@ module Torque
           buffer = ActionView::OutputBuffer.new
           context._run(method_name, self, context.assigns, buffer, has_strict_locals: strict_locals?)
 
-          # TODO: Implement intelligent locals annotation, we can detect instance variable accesses and use them as
-          # the actual locals of the actual template
-          "<%# locals: () %>\n#{buffer.to_s}"
+          expected_locals.concat(context.request_locals_names.map(&:freeze)).freeze if expected_locals
+          "#{context.required_locals_annotation}\n#{buffer.to_s}"
         rescue ActionView::StrictLocalsError => e
           raise StrictLocalsError.new(e, template)
         ensure
@@ -110,6 +104,10 @@ module Torque
             ensure
               ActionView::Base.annotate_rendered_view_with_filenames = old_annotate
             end
+          end
+
+          def locals_code
+            '@required_locals = {};'
           end
       end
     end

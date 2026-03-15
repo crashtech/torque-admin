@@ -6,11 +6,19 @@ module Torque
       module Requested
         extend ActiveSupport::Concern
 
-        attr_reader :template_prefixes
+        TemplateKeys = Struct.new(:prefixes, :source)
 
-        def initialize(template_prefixes:, **kwargs)
+        attr_reader :template_keys
+
+        def initialize(template: nil, **kwargs)
           super(**kwargs)
-          @template_prefixes = template_prefixes
+          @template_keys = TemplateKeys.new(*template.values_at(:prefixes, :source)) if template
+        end
+
+        def template_source_path
+          return unless (source = template_keys&.source&.presence)
+
+          ActionView::TemplatePath.parse(source)
         end
       end
     end

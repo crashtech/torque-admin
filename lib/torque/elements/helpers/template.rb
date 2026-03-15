@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative 'template/locals_helper'
+
 module Torque
   module Elements
     module Helpers
@@ -7,9 +9,7 @@ module Torque
       module Template
         extend ActiveSupport::Concern
 
-        # def use_local(name)
-        #   "<%= #{name} %>".html_safe
-        # end
+        include LocalsHelper
       end
     end
   end

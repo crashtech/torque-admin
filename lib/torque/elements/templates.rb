@@ -2,6 +2,7 @@
 
 require 'action_view/template'
 
+require_relative 'templates/details'
 require_relative 'templates/resolver'
 require_relative 'templates/template'
 require_relative 'templates/unbound_template'
