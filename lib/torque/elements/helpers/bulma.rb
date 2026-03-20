@@ -5,12 +5,14 @@ module Torque
     module Helpers
       # = Torque Elements \Bulma Helpers
       module Bulma
+        extend HelperBuilder
 
-        def badge(content, &block)
-          tag_builder.span(content, class: 'tag', &block)
-        end
+        ICON = 'fas fa-%s'
+        SIZES = %w[small default normal medium large].each_with_index.with_object({}) do |(name, idx), result|
+          result[idx + 1] = result[name] = name == 'default' ? '' : "is-#{name}"
+        end.with_indifferent_access.freeze
 
-        alias tag badge
+        load_definitions './bulma/elements'
 
       end
     end
