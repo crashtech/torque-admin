@@ -6,6 +6,12 @@ module Torque
       # = Torque Elements \Bulma Helpers
       module Bulma
 
+        def badge(content, &block)
+          tag_builder.span(content, class: 'tag', &block)
+        end
+
+        alias tag badge
+
       end
     end
   end

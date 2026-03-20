@@ -7,10 +7,8 @@ module Torque
       class RenderContext < ActionView::Base
         include Helpers::Template
 
-        attr_reader :view_context
-
         delegate :compiled_method_container, to: :class
-        delegate_missing_to :view_context
+        delegate_missing_to :@view_context
 
         module Reloader
           def clear
@@ -26,7 +24,6 @@ module Torque
         end
 
         def initialize(*args)
-          @view_context = args.pop
           super(*args)
           @_request = nil
         end

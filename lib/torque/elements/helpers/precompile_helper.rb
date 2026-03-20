@@ -1,0 +1,39 @@
+# frozen_string_literal: true
+
+module Torque
+  module Elements
+    module Helpers
+      # = Torque Elements \Precompile Helpers
+      module PrecompileHelper
+
+        def precompile(*keys, &block)
+          source = caller.lazy.grep(Regexp.new(@current_template.identifier)).first
+          content = find_or_initialize_precompiled(source[/:(\d+):/, 1].to_i, *keys, &block)
+          ERB.new(content).result(binding).html_safe
+        end
+
+        private
+
+          def find_or_initialize_precompiled(*keys, &block)
+            name = precompiled_name(keys.hash)
+            container = compiled_method_container
+
+            if container.instance_variable_defined?(name)
+              container.instance_variable_get(name)
+            else
+              # TODO: Swap the current protection to template mode
+              container.instance_variable_set(name, capture(&block))
+            end
+          end
+
+          def precompiled_name(id)
+            name = "@_#{@current_template.send(:identifier_method_name)}"
+            name << "__precompiled_#{id}"
+            name << "_#{@current_template.__id__}"
+            name.tr('-', '_')
+          end
+
+      end
+    end
+  end
+end

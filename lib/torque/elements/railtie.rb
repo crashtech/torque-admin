@@ -15,6 +15,20 @@ module Torque
     class Railtie < ::Rails::Railtie
       config.eager_load_namespaces << Torque::Elements
 
+      initializer 'torque-elements.default_attributes' do
+        Elements.define_attribute('@content', ContentHandler.new)
+
+        Elements.define_attribute('class', ListHandler.new)
+        Elements.define_attribute('name', NameHandler.new)
+
+        if defined?(Stimulus::Engine)
+          Elements.define_attribute('data-controller', ListHandler.new(nested_separator: '--'))
+          Elements.define_attribute('data-action', ListHandler.new(nested_separator: '#'))
+
+          Elements.define_attribute(/\Adata-.*-target\z/, RefHandler.new(format: :lower_camel_case))
+        end
+      end
+
       initializer 'torque-elements.action_view_setup' do
         ActiveSupport.on_load(:action_view) do
           ActionView::LogSubscriber.include(LogSubscriber)
@@ -27,6 +41,10 @@ module Torque
           ActionView::AbstractRenderer.prepend(Templates::AbstractRenderer)
           ActionView::LookupContext.prepend(Templates::LookupContext)
         end
+      end
+
+      initializer 'torque-elements.add_helpers' do
+        ActiveSupport.on_load(:action_view) { include Elements::Helpers }
       end
     end
   end

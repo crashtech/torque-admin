@@ -4,8 +4,11 @@ module Torque
   module Elements
     # = Torque Elements \UI Helpers
     class UiBuilder
+      CONTENT_OPTIONS = (ContentHandler::PARTS - [:content]).map(&:to_s).map(&:freeze).freeze
+
       attr_reader :view_context
 
+      delegate :attribute_name, to: 'Torque::Elements'
       delegate_missing_to :view_context
 
       class << self
@@ -54,6 +57,38 @@ module Torque
       def framework_name
         view_context.try(:controller).try(:ui_framework)&.to_s || 'NONE'
       end
+
+      def collapse_options(options)
+        options.each_with_object({}) do |(key, value), collapsed|
+          collapsed[key] = Elements.find_attribute(key).collapse(value)
+        end
+      end
+
+      def combine_option(key, current, value)
+        current[key] = Elements.find_attribute(key).combine(current[key], value)
+      end
+
+      def combine_options(current, options)
+        options&.each_with_object(current) { |(key, value), combined| combine_option(key, combined, value) }
+      end
+
+      def flatten_options(options, prefix = '')
+        options.each_with_object({}) do |(key, value), result|
+          if value.is_a?(Hash)
+            result.merge!(flatten_options(value, "#{prefix}#{key}-"))
+          elsif CONTENT_OPTIONS.include?(attr = attribute_name("#{prefix}#{key}"))
+            (result['@content'] ||= {})[attr.to_sym] = value
+          else
+            result[attr] = value
+          end
+        end
+      end
+
+      protected
+
+        def tag_builder
+          view_context.tag
+        end
     end
   end
 end

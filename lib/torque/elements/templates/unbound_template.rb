@@ -77,7 +77,10 @@ module Torque
 
           compile!(context)
           buffer = ActionView::OutputBuffer.new
-          context._run(method_name, self, context.assigns, buffer, has_strict_locals: strict_locals?)
+          controller.view_context._run_under(buffer, self) do |view_context|
+            context.instance_variable_set(:@view_context, view_context)
+            context._run(method_name, self, context.assigns, buffer, has_strict_locals: strict_locals?)
+          end
 
           expected_locals.concat(context.request_locals_names.map(&:freeze)).freeze if expected_locals
           "#{context.required_locals_annotation}\n#{buffer.to_s}"

@@ -64,8 +64,8 @@ module Torque
         Templates::RenderContext
       end
 
-      def template_context(context = view_context)
-        template_context_class.new(lookup_context, template_assigns, self, context)
+      def template_context
+        template_context_class.new(lookup_context, template_assigns, self)
       end
 
       def template_assigns
