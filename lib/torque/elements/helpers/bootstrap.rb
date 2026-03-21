@@ -5,15 +5,16 @@ module Torque
     module Helpers
       # = Torque Elements \Bootstrap Helpers
       module Bootstrap
-        extend HelperBuilder
+        extend HelperConstructor
 
-        define :badge do |b|
-          b.preset(:default, as: 'span', class: 'badge')
-          b.preset(:pill, class: 'rounded-pill')
-          b.preset(:bubble, class: 'position-absolute top-0 start-100 translate-middle')
+        ICON = +'fas fa-%s'
+        SIZES = { sm: 'sm', default: '', lg: 'lg' }.with_indifferent_access.freeze
 
-          b.property(:color).formats(:class, 'text-bg-%s')
-        end
+        shared(:icon) { |b| b.calls(:icon).adds_to_content(:before) }
+        shared(:size) { |b| b.maps_using(:SIZES).assigns(:class) }
+        shared(:color) { |b| b.assigns(:class) }
+
+        load_definitions './bootstrap/elements'
 
       end
     end

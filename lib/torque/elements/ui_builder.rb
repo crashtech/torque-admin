@@ -25,8 +25,7 @@ module Torque
         end
 
         def enable_framework(name, base: UiBuilder)
-          mod = name.to_s.classify.sub(/Ui/, 'UI')
-          add_framework(name, Helpers.const_get(mod), base: base)
+          add_framework(name, Elements.ui_framework_helper(name), base: base)
         end
 
         def add_framework(name, mod, base: UiBuilder)
@@ -73,10 +72,13 @@ module Torque
       end
 
       def flatten_options(options, prefix = '')
+        return unless options.present?
+
         options.each_with_object({}) do |(key, value), result|
-          if value.is_a?(Hash)
+          attr = attribute_name("#{prefix}#{key}")
+          if value.is_a?(Hash) && !Elements.static_attribute?(attr)
             result.merge!(flatten_options(value, "#{prefix}#{key}-"))
-          elsif CONTENT_OPTIONS.include?(attr = attribute_name("#{prefix}#{key}"))
+          elsif CONTENT_OPTIONS.include?(attr)
             (result['@content'] ||= {})[attr.to_sym] = value
           else
             result[attr] = value

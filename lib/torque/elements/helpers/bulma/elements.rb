@@ -10,108 +10,72 @@ end
 
 define :button do |b|
   b.preset(:default, as: 'button', class: 'button')
+  b.preset(:multiple, as: 'div', class: { button: false, 'has-addons' => true })
 
-  b.property(:multiple).applies(as: 'div', class: { button: false, 'has-addons' => true })
-
-  b.property(:icon).calls(:icon).adds_to_content(:before).wrap_content(:span)
-
-  b.property(:light).applies(class: 'is-light')
-  b.property(:dark).applies(class: 'is-dark')
-  b.property(:responsive).applies(class: 'is-responsive')
-  b.property(:fullwidth).applies(class: 'is-fullwidth')
-  b.property(:outlined).applies(class: 'is-outlined')
-  b.property(:inverted).applies(class: 'is-inverted')
-  b.property(:rounded).applies(class: 'is-rounded')
-  b.property(:loading).applies(class: 'is-loading')
-  b.property(:static).applies(class: 'is-static')
-  b.property(:selected).applies(class: 'is-selected')
+  b.toggles(:light, :dark, :responsive, :fullwidth, :outlined, :inverted, :rounded, :loading, :static, :selected, format: 'is-%s')
   b.property(:disabled).applies(disabled: true)
 
-  b.property(:size).maps_using(:SIZES).assigns(:class)
-  b.property(:color).formats(:class, 'is-%s')
+  b.imports(:icon, :size, :color)
 end
 
-def buttons(*args, **kwargs, &block)
-  button(*args, multiple: true, **kwargs, &block)
-end
+associate :buttons, to: :button, preset: :multiple
 
 define :content do |b|
   b.preset(:default, as: 'div', class: 'content')
-
-  b.property(:size).maps_using(:SIZES).assigns(:class)
+  b.imports(:size)
 end
 
 define :delete, with_content: false do |b|
   b.preset(:default, as: 'button', class: 'delete')
-
-  b.property(:size).maps_using(:SIZES).assigns(:class)
+  b.imports(:size)
 end
 
 define :icon do |b|
   b.preset(:default, as: 'span', class: 'icon')
 
-  b.argument(:name).calls('@view_context.tag', '(:i, class: format(ICON, value))').adds_to_content
-
-  b.property(:size).maps_using(:SIZES).assigns(:class)
+  b.argument(:name).calls('tag_builder.i', '(class: format(ICON, value))').adds_to_content
+  b.imports(:size)
 end
 
 define :figure do |b|
   b.preset(:default, as: 'figure', class: 'image')
 
-  b.property(:rounded).applies(class: 'is-rounded')
-  b.property(:fullwidth).applies(class: 'is-fullwidth')
+  b.toggles(:rounded, :fullwidth, format: 'is-%s')
 
-  b.property(:size).formats(:class, 'is-%$1sx%$1s')
+  b.property(:size).formats(:class, 'is-%1$sx%1$s')
   b.property(:ratio).maps(false, square: 'square').formats(:class, 'is-%s')
 end
 
 define :notification do |b|
   b.preset(:default, as: 'div', class: 'notification')
 
-  b.property(:light).applies(class: 'is-light')
-  b.property(:dark).applies(class: 'is-dark')
-
-  b.property(:color).formats(:class, 'is-%s')
+  b.toggles(:light, :dark, format: 'is-%s')
+  b.imports(:color)
 end
 
 define :progress, with_content: false do |b|
   b.preset(:default, as: 'progress', class: 'progress')
-
-  b.property(:size).maps_using(:SIZES).assigns(:class)
-  b.property(:color).formats(:class, 'is-%s')
+  b.imports(:size, :color)
 end
 
 define :badge do |b|
   b.preset(:default, as: 'span', class: 'tag')
+  b.preset(:multiple, as: 'div', class: { tag: false, tags: true, 'has-addons' => true })
 
-  b.property(:multiple).applies(class: { tag: false, tags: true, 'has-addons' => true })
-
-  b.property(:rounded).applies(class: 'is-rounded')
-  b.property(:delete).applies(class: 'is-delete')
-  b.property(:light).applies(class: 'is-light')
-  b.property(:hoverable).applies(class: 'is-hoverable')
-
-  b.property(:size).maps_using(:SIZES).assigns(:class)
-  b.property(:color).formats(:class, 'is-%s')
+  b.toggles(:rounded, :delete, :light, :hoverable, format: 'is-%s')
+  b.imports(:size, :color)
 end
 
-alias tag badge
-
-def badges(*args, **kwargs, &block)
-  tag(*args, multiple: true, **kwargs, &block)
-end
-
-alias tags badges
+associate :tag, to: :badge
+associate :badges, to: :badge, preset: :multiple
+associate :tags, to: :badges
 
 define :title do |b|
   b.preset(:default, as: 'h1', class: 'title')
+  b.preset(:subtitle, as: 'h2', class: { title: false, subtitle: true })
 
   b.property(:spaced).applies(class: 'is-spaced')
-  b.property(:subtitle).applies(as: 'h2', class: { title: false, subtitle: true })
-
-  b.property(:size).formats(:class, 'is-%s')
+  b.imports(:size)
 end
 
-def subtitle(*args, **kwargs, &block)
-  tag(*args, subtitle: true, **kwargs, &block)
-end
+associate :subtitle, to: :title, preset: :subtitle

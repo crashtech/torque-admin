@@ -12,7 +12,7 @@ module Torque
     autoload :Templates
 
     autoload :UiBuilder
-    autoload :HelperBuilder
+    autoload :HelperConstructor
 
     autoload_under :handlers do
       autoload :BaseHandler
@@ -21,6 +21,14 @@ module Torque
       autoload :NameHandler
       autoload :RefHandler
     end
+
+    autoload_under :builders do
+      autoload :AliasBuilder
+      autoload :HelperBuilder
+    end
+
+    ## Settings
+    mattr_accessor :auto_compile_on_define, default: false
 
     class << self
       def logger
@@ -50,6 +58,10 @@ module Torque
         end
       end
 
+      def static_attribute?(name)
+        attributes[:static].key?(name.to_s)
+      end
+
       ## Quick access to configuration methods
 
       def enable_ui_framework(*args, **kwargs)
@@ -58,6 +70,10 @@ module Torque
 
       def add_ui_framework(*args, **kwargs)
         UiBuilder.add_framework(*args, **kwargs)
+      end
+
+      def ui_framework_helper(name)
+        Helpers.const_get(name.to_s.classify.sub(/Ui/, 'UI'))
       end
 
       private

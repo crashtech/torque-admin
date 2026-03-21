@@ -20,7 +20,6 @@ module Torque
 
       autoload :Bootstrap
       autoload :Bulma
-      autoload :MaterialUI
       autoload :SemanticUI
       autoload :Tailwind
 
