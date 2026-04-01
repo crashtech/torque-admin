@@ -20,6 +20,7 @@ module Torque
         end
 
         private
+
           def compiled_source
             method_name # Pre cache the method name
             old_short_identifier = short_identifier

@@ -9,16 +9,31 @@ require_relative 'admin/version'
 
 module Torque
   module Admin
-    extend ActiveSupport::Autoload
+    APP_DIR = Pathname.new(__dir__).join('../../app').freeze
 
-    include ActiveSupport::Configurable
+    extend ActiveSupport::Autoload
 
     autoload :Application
     autoload :Engine
 
+    # App-like Constants
+    autoload :BaseController, APP_DIR.join('controllers', 'base_controller')
+    autoload :ResourceController, APP_DIR.join('controllers', 'resource_controller')
+    autoload :DashboardController, APP_DIR.join('controllers', 'dashboard_controller')
+
+    module Themes
+      extend ActiveSupport::Autoload
+
+      autoload :SemanticUI
+    end
+
     class << self
       def [](name)
         instances[name.to_sym] ||= Application.new(name)
+      end
+
+      def configure(&block)
+        self[:default].configure(&block)
       end
 
       def instances
@@ -28,7 +43,6 @@ module Torque
   end
 end
 
-require 'torque/admin/config'
 require 'torque/admin/errors'
 require 'torque/admin/railtie'
 

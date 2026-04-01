@@ -2,8 +2,7 @@
 
 module Torque
   module Admin
-    # = Torque Admin \Resource
-    class Resource
+    module ApplicationHelper
     end
   end
 end

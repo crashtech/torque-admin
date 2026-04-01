@@ -1,0 +1,37 @@
+# frozen_string_literal: true
+
+module Torque
+  module Admin
+    class Application
+      module LazyModules
+        MODULES = {
+          BaseController: :fetch_base_controller,
+          ResourceController: [:build_controller, 'Torque::Admin::ResourceController'],
+          DashboardController: [:build_controller, 'Torque::Admin::DashboardController'],
+        }.freeze
+
+        class << self
+          def fetch_base_controller(mod)
+            mod.admin_application.base_controller
+          end
+
+          def build_controller(mod, extension)
+            klass = Class.new(mod.const_get(:BaseController))
+            klass.include(extension.constantize)
+            klass.abstract!
+            klass
+          end
+        end
+
+        def const_defined?(name, *)
+          MODULES.key?(name) || super
+        end
+
+        def const_missing(name)
+          return super if (handler, *args = MODULES[name]).nil?
+          const_set(name, LazyModules.public_send(handler, self, *args))
+        end
+      end
+    end
+  end
+end

@@ -2,9 +2,9 @@
 
 require 'rails/railtie'
 
-require_relative 'railties/extended_mapper'
-require_relative 'railties/route_set'
-require_relative 'railties/mapper'
+# require_relative 'railties/extended_mapper'
+# require_relative 'railties/route_set'
+# require_relative 'railties/mapper'
 
 module Torque
   module Admin
@@ -14,7 +14,6 @@ module Torque
     class Railtie < ::Rails::Railtie
       config.eager_load_namespaces << Torque::Forms
       config.eager_load_namespaces << Torque::Admin
-      config.admin = Admin.config
 
       rake_tasks do
       end
@@ -25,13 +24,13 @@ module Torque
       console do
       end
 
-      # Ensure a valid logger
-      initializer 'torque-admin.logger' do |app|
-        ActiveSupport.on_load(:torque_admin) do
-          config.logger ||= begin
-            logger = ::Rails.logger
-            logger.respond_to?(:tagged) ? logger : ActiveSupport::TaggedLogging.new(logger)
-          end
+      initializer 'torque-admin.railtie_setup' do
+        ::Rails::Railtie::ABSTRACT_RAILTIES << 'Torque::Admin::Engine'
+      end
+
+      initializer 'torque-admin.action_controller_setup' do
+        ActiveSupport.on_load(:action_controller) do
+          append_view_path Admin::APP_DIR.join('views') if respond_to?(:append_view_path)
         end
       end
     end

@@ -19,6 +19,7 @@ module Torque
       autoload :ContentHandler
       autoload :ListHandler
       autoload :NameHandler
+      autoload :MapHandler
       autoload :RefHandler
     end
 
@@ -73,7 +74,7 @@ module Torque
       end
 
       def ui_framework_helper(name)
-        Helpers.const_get(name.to_s.classify.sub(/Ui/, 'UI'))
+        Helpers.const_get(name.to_s.classify.sub(/Ui$/, 'UI'))
       end
 
       private

@@ -18,6 +18,7 @@ module Torque
       initializer 'torque-elements.default_attributes' do
         Elements.define_attribute('@content', ContentHandler.new)
 
+        Elements.define_attribute('style', MapHandler.new(separator: ';', format: :parameterize, style: true))
         Elements.define_attribute('class', ListHandler.new)
         Elements.define_attribute('name', NameHandler.new)
 

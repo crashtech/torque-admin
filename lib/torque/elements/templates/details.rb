@@ -22,6 +22,8 @@ module Torque
         private
 
           def extract_details(options)
+            return super if is_a?(FrameRenderer)
+
             super.merge(Templates.extract_details(options))
           end
       end

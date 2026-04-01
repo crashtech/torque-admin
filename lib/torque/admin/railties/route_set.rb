@@ -18,3 +18,5 @@ module Torque
     end
   end
 end
+
+# action_dispatch.request.path_parameters

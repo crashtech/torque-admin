@@ -108,6 +108,7 @@ module Torque
       end
 
       private
+
         def _frame(*)
           # This will be overwritten by _write_frame_method
         end
@@ -145,14 +146,14 @@ module Torque
         end
 
         def _include_frame?(options)
-          !options.keys.intersect?([:body, :plain, :html, :inline, :partial]) || options.key?(:frame)
+          !options.keys.intersect?(%i[body plain html inline partial]) || options.key?(:frame)
         end
 
         def _frame_for_renderer(options, frame)
           layout = options.delete(:layout)
           return layout unless frame && layout
 
-          Proc.new do |*args|
+          proc do |*args|
             resolved_frame = frame.respond_to?(:call) ? frame.call(*args) : frame
             layout = FrameRenderer.new(resolved_frame, layout, options, *args) if resolved_frame
             layout

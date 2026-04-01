@@ -37,7 +37,7 @@ module Torque
         when TrueClass, FalseClass
           block.call(input, prefix.chomp(@nested_separator)) unless prefix.empty?
         else
-          input.to_s.split(@separator).each { |part| part.strip.presence&.then(&block) }
+          input.to_s.split(@separator).each { |part| part.strip.presence&.prepend(prefix)&.then(&block) }
         end
       end
     end

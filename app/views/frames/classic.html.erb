@@ -1,0 +1,16 @@
+<%# ui.body(:classic) do %>
+<body style="display: flex; flex-direction: column; min-height: 100vh;">
+  <header class="ui menu">
+  </header>
+
+  <main class="ui container" style="flex: 1; padding: 2rem 0;">
+    <%= yield %>
+  </main>
+
+  <footer class="ui inverted vertical footer segment">
+    <div class="ui center aligned container">
+      <p>Copyright &copy; 2024</p>
+    </div>
+  </footer>
+</body>
+<%# end %>

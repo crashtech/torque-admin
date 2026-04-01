@@ -36,6 +36,20 @@ module Torque
           framework_classes[normalize_name(name)] = Class.new(base).tap { |klass| klass.include(mod) }
         end
 
+        def name_of(instance = self)
+          framework_classes.key(instance)
+        end
+
+        alias framework_name name_of
+
+        def inspect
+          if self.eql?(UiBuilder)
+            "#<Torque::Elements::UiBuilder (base class) @frameworks=[#{framework_classes.keys.join(', ')}]>"
+          else
+            "#<Torque::Elements::UiBuilder (base class) @framework=#{framework_name}>"
+          end
+        end
+
         protected
 
           def normalize_name(name)
@@ -45,7 +59,7 @@ module Torque
         protected
 
           def framework_classes
-            @framework_classes ||= {}
+            @@framework_classes ||= {}
           end
       end
 
@@ -54,7 +68,7 @@ module Torque
       end
 
       def framework_name
-        view_context.try(:controller).try(:ui_framework)&.to_s || 'NONE'
+        self.class.name_of(self.class) || 'NONE'
       end
 
       def collapse_options(options)
@@ -84,6 +98,10 @@ module Torque
             result[attr] = value
           end
         end
+      end
+
+      def inspect
+        "#<Torque::Elements::UiBuilder @framework=#{framework_name}>"
       end
 
       protected

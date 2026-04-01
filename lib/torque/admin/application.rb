@@ -1,70 +1,85 @@
 # frozen_string_literal: true
 
+require_relative 'application/default_config'
+require_relative 'application/lazy_modules'
+
 module Torque
   module Admin
+    # = Torque Admin \Application
     class Application
-      include ActiveSupport::Configurable
+      attr_reader :name, :config, :engine, :mod
 
-      # The root path of the application
-      config_accessor :root_path
-
-      # The parent module under which the application's namespace will be defined
-      config_accessor :parent_module, default: 'Object'
-
-      attr_reader :name
-
-      delegate :helpers, to: :engine
+      delegate :title, to: :config
 
       def initialize(name)
         @name = name.to_sym
         @name = :admin if @name == :default
-        @mounted = false
+
+        @config = ActiveSupport::InheritableOptions.new(DEFAULT_CONFIG)
+        @engine = Admin::Engine.build(self)
+        @mod = setup_application_module
+
+        setup_additional_config
       end
 
       def configure
         yield config
       end
 
-      def mounted?
-        @mounted
-      end
-
-      def mount!(**options)
-        return if mounted?
-
-        config.root_path ||= options[:at] || options[:path] || "/#{name}"
-
-        @mounted = true
-      end
-
-      def engine
-        @engine ||= begin
-          klass = Class.new(::Rails::Engine)
+      def base_controller
+        @base_controller ||= begin
+          klass = Class.new(config.base_controller.constantize)
           klass.define_singleton_method(:admin_application, &method(:itself))
-
-          klass.extend(Admin::Engine::ClassMethods)
-          klass.include(Admin::Engine)
-
-          base_module.const_set('Engine', klass)
+          klass.include(Admin::BaseController)
+          klass.layout(name.to_s)
+          klass.abstract!
+          klass
         end
       end
 
-      def base_module
-        @base_module ||= begin
-          base = config.parent_module
-          base = base.constantize if base.is_a?(String)
+      def ui_builder
+        @ui_builder ||= begin
+          ui_name = config.ui_theme!.to_s
+          mod = Themes.const_get(ui_name.classify.sub(/Ui$/, 'UI'))
+          Elements::UiBuilder.add_framework("#{name}/#{ui_name}", mod)
+        end
+      end
+
+      def inspect
+        "#<#{self.class.name} @name=#{(name == :admin ? ':default' : name.inspect)} @engine=#{engine.name}>"
+      end
+
+      private
+
+        def setup_additional_config
+          @config.title ||= @name.to_s.titleize
+        end
+
+        def setup_application_module
+          base = config.parent_module!.constantize
 
           mod_name = name.to_s.camelize.to_sym
-          base.const_set(mod_name, Module.new)
-          # Define +table_name_prefix+, so admins don't get such property
-          # Define +use_relative_model_naming?= false+
-          # Decide about +railtie_helpers_paths+ because accessing public helpers sounds better
-        end
-      end
+          mod = base.const_defined?(mod_name) ? base.const_get(mod_name) : base.const_set(mod_name, Module.new)
+          raise ArgumentError, <<~MSG if mod.const_defined?(:Engine)
+            The module #{mod.name} already has a constant named Engine.
+            Please remove it or choose a different name for your application.
+          MSG
 
-      def elements_module
-        @elements_module ||= base_module.const_set('Elements', Module.new)
-      end
+          mod.extend(Application::LazyModules)
+          mod.define_singleton_method(:admin_application, &method(:itself))
+
+          setup_hybrid_module(mod) if config.isolate_namespace.nil?
+          engine.isolate_namespace(mod) unless config.isolate_namespace.eql?(false)
+          mod.const_set(:Engine, engine)
+          mod
+        end
+
+        def setup_hybrid_module(mod)
+          mod.class_eval <<~RUBY, __FILE__, __LINE__ + 1
+            def table_name_prefix; end
+            def use_relative_model_naming?; false; end
+          RUBY
+        end
     end
   end
 end

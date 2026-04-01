@@ -52,11 +52,11 @@ module Torque
         end
 
         def append_template_path(path)
-          append_view_path(_build_template_paths(path))
+          append_view_path(_build_template_paths(path)) unless path.respond_to?(:exist?) && !path.exist?
         end
 
         def prepend_template_path(path)
-          prepend_view_path(_build_template_paths(path))
+          prepend_view_path(_build_template_paths(path)) unless path.respond_to?(:exist?) && !path.exist?
         end
       end
 
