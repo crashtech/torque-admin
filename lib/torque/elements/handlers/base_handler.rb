@@ -16,8 +16,7 @@ module Torque
 
         def list_combine(current, value)
           value = [value] if value.is_a?(Hash)
-          result = [*current, *value]
-          result
+          [*current, *value]
         end
 
         def format(value)
@@ -29,9 +28,9 @@ module Torque
         def formatter
           @formatter ||= @format.respond_to?(:call) ? @format : begin
             case @format
-            when :lower_camelize, :lower_camel_case then
+            when :lower_camelize, :lower_camel_case
               proc { |value| ActiveSupport::Inflector.camelize(value, false) }
-            when :dash then ActiveSupport::Inflector.method(:parameterize)
+            when :dash then ActiveSupport::Inflector.method(:dasherize)
             when :camel_case then ActiveSupport::Inflector.method(:camelize)
             else ActiveSupport::Inflector.method(@format)
             end

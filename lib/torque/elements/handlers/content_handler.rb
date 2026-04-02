@@ -11,18 +11,21 @@ module Torque
       end
 
       def collapse(value)
-        result = value.flatten.each_with_object(PARTS.product([nil]).to_h) do |input, result|
-          next (result[:content] ||= []) << input unless input.is_a?(Hash)
-
-          PARTS.each do |part|
-            next if (piece = input[part]).blank?
-            (result[part] ||= []) << piece
-          end
+        result = PARTS.product([nil]).to_h
+        each_value(value) do |part, content|
+          (result[part] ||= []) << content
         end
 
         result = result.compact.transform_values(&:flatten)
         result[:prepend]&.reverse!
         result
+      end
+
+      def each_value(input)
+        input.flatten.each do |value|
+          value = { content: value } unless value.is_a?(Hash)
+          PARTS.each { |part| value[part].presence&.then { |content| yield(part, content) } }
+        end
       end
     end
   end

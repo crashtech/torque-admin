@@ -110,39 +110,32 @@ module Torque
       def compile(presets, shared)
         raise ArgumentError, +'No default preset defined' unless @presets.key?(:default)
 
-        if @with_content
-          @arguments << "content#{+' = nil' unless @with_content == :required}"
-          tag_content = +', *(view_context.safe_join(inner.flatten) if inner&.present?)'
-        end
+        @arguments << "content#{+' = nil' unless @with_content == :required}" if @with_content
+        @arguments << '' if @arguments.any?
 
         import_shared_properties(shared)
         presets[@name] = @presets.dup
 
         operations = @operations.values.flatten
         operations << operations.shift # Swap end
-        @arguments << '' if @arguments.any?
 
         <<~RUBY
           def #{@name}(#{@arguments.join(', ')}*_toggles, preset: nil, **kwargs#{', &block' if @with_content})
-            _properties = {}.with_indifferent_access
-            options = [*presets[:#{@name}].values_at(:default, *preset), kwargs].each_with_object({}) do |input, result|
-              next unless input.present?
-              input = input.dup unless input.eql?(kwargs)
-              _properties.merge!(input.extract!(#{@properties.map(&:inspect).join(', ')}))
-              combine_options(result, flatten_options(input))
-            end
+            _options, _properties = split_options_properties(:#{@name}, [#{@properties.map(&:inspect).join(', ')}], preset, kwargs)
+            options = {}
 
             _toggles.each { |toggle| _properties[toggle] = true }
-            #{+%(combine_option('@content', options, (block_given? ? view_context.capture(&block) : content))) if @with_content}
+            #{content_assigner if @with_content}
             #{operations.join("\n")}
 
             tag_name = _properties.fetch(:as, '#{@with_content ? 'div' : 'span'}')
-
-            options = collapse_options(options)
-            left, *inner, right = options.delete('@content')&.values_at(:prepend, :before, :content, :after, :append)
-            view_context.safe_join([*left, tag_builder.public_send(tag_name#{tag_content}, **options), *right])
+            render_tag(tag_name, combine_options(options, _options), with_content: #{@with_content.present?.inspect})
           end
         RUBY
+      end
+
+      def content_assigner
+        +%(combine_option('@content', options, (block_given? ? view_context.capture(&block) : content)))
       end
 
       private

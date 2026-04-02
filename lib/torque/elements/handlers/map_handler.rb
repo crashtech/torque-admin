@@ -9,6 +9,7 @@ module Torque
         @nested_separator = nested_separator
         @format = format
         @style = style
+        super()
       end
 
       def combine(current, value)
@@ -19,10 +20,10 @@ module Torque
         result = {}
 
         each_value(values.flatten) do |key, value|
-          if FalseClass === value
-            result.delete(format(key))
-          else
+          if value
             result[format(key)] = value
+          else
+            result.delete(format(key))
           end
         end
 
@@ -35,10 +36,16 @@ module Torque
         case input
         when Hash
           input.each { |key, value| each_value(value, prefix: prefix + key.to_s + @nested_separator, &block) }
+        when Enumerable
+          input.each { |value| each_value(value, prefix: prefix, &block) }
         when TrueClass, FalseClass
-          block.call(input, prefix.chomp(@nested_separator)) unless prefix.empty?
+          block.call(prefix.chomp(@nested_separator), input) unless prefix.empty?
         else
-          split_string(input).each { |key, value| block.call(key.prepend(prefix), value) }
+          if prefix.empty?
+            split_string(input.to_s, &block)
+          else
+            block.call(prefix.chomp(@nested_separator), input.to_s.strip)
+          end
         end
       end
 

@@ -5,7 +5,8 @@ require 'active_support/ordered_options'
 module Torque
   module Admin
     class Application
-      DEFAULT_CONFIG = ActiveSupport::InheritableOptions.new(
+      config = ActiveSupport::InheritableOptions
+      DEFAULT_CONFIG = config.new(
         # The title of the admin system. Setting to a plain string will render it as text, while setting it to a
         # proc will render the result of the proc as HTML, or setting as a symbol will invoke the helper method.
         # By default, it is set to nil, which will render the title as the application name.
@@ -28,7 +29,11 @@ module Torque
 
         # The name of the theme to use for the admin application. The default options are: bootstrap, bulma,
         # semantic_ui, and tailwind. By default, it is set to +tailwind+.
-        ui_theme: 'tailwind',
+        theme: 'tailwind',
+
+        # The extensions to load for the admin theme. You can provide procs to ran under the context of the ui theme
+        # class, or modules to be included in the class.
+        theme_extensions: [],
       ).freeze
     end
   end

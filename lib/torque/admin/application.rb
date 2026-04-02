@@ -15,7 +15,7 @@ module Torque
         @name = name.to_sym
         @name = :admin if @name == :default
 
-        @config = ActiveSupport::InheritableOptions.new(DEFAULT_CONFIG)
+        @config = DEFAULT_CONFIG.deep_dup
         @engine = Admin::Engine.build(self)
         @mod = setup_application_module
 
@@ -27,32 +27,37 @@ module Torque
       end
 
       def base_controller
-        @base_controller ||= begin
-          klass = Class.new(config.base_controller.constantize)
-          klass.define_singleton_method(:admin_application, &method(:itself))
-          klass.include(Admin::BaseController)
-          klass.layout(name.to_s)
-          klass.abstract!
-          klass
-        end
+        @base_controller ||= mod.const_get(:BaseController)
       end
 
       def ui_builder
         @ui_builder ||= begin
-          ui_name = config.ui_theme!.to_s
-          mod = Themes.const_get(ui_name.classify.sub(/Ui$/, 'UI'))
-          Elements::UiBuilder.add_framework("#{name}/#{ui_name}", mod)
+          name, mod_name = ui_theme
+          mod = Themes.const_get(mod_name)
+          Elements::UiBuilder.add_framework(name, mod).tap(&method(:apply_theme_extensions))
+        end
+      end
+
+      def clear
+        @ui_builder = nil
+        @base_controller = nil
+        LazyModules::MODULES.each_key do |mod_name|
+          mod.remove_const(mod_name) if mod.const_defined?(mod_name)
         end
       end
 
       def inspect
-        "#<#{self.class.name} @name=#{(name == :admin ? ':default' : name.inspect)} @engine=#{engine.name}>"
+        "#<#{self.class.name} @name=#{name == :admin ? ':default' : name.inspect} @engine=#{engine.name}>"
       end
 
       private
 
         def setup_additional_config
           @config.title ||= @name.to_s.titleize
+        end
+
+        def ui_theme
+          @ui_theme ||= ["#{name}/#{config.theme!}", config.theme.to_s.classify.sub(/Ui$/, 'UI')]
         end
 
         def setup_application_module
@@ -79,6 +84,20 @@ module Torque
             def table_name_prefix; end
             def use_relative_model_naming?; false; end
           RUBY
+        end
+
+        def apply_theme_extensions(klass)
+          return if (list = config.theme_extensions).blank?
+
+          Array.wrap(list).each do |extension|
+            if extension.respond_to?(:call)
+              klass.instance_exec(&extension)
+            elsif extension.is_a?(String)
+              klass.include(extension.constantize)
+            else
+              klass.include(extension)
+            end
+          end
         end
     end
   end

@@ -35,20 +35,6 @@ module Torque
       ensure
         @output_buffer, @virtual_path, @current_template = _old_output_buffer, _old_virtual_path, _old_template
       end
-
-
-
-      def unsafe__menu_item(label, href)
-        options = { class: [] }
-        options[:class] << 'active' if request.path == href
-        link_to(label, href, options)
-      end
-
-      def menu_item(label, href)
-        return unsafe__menu_item(label, href) if @current_template.virtual_path != 'show'
-
-        "<%= menu_item(#{label.inspect}, #{href.inspect}) %>".html_safe
-      end
     end
   end
 end

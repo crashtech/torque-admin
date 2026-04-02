@@ -9,6 +9,7 @@ module Torque
       attr_reader :view_context
 
       delegate :attribute_name, to: 'Torque::Elements'
+      delegate :presets, to: :class
       delegate_missing_to :view_context
 
       class << self
@@ -16,7 +17,7 @@ module Torque
           return super if self != UiBuilder
           return super if (framework = context.try(:controller).try(:ui_framework)).blank?
 
-          raise MissingFrameworkError.new(<<~MSG.squish) unless klass = framework_classes[normalize_name(framework)]
+          raise MissingFrameworkError, <<~MSG.squish unless (klass = framework_classes[normalize_name(framework)])
             No UI framework named '#{framework}'.
             Please make sure it is defined and added to the list of supported frameworks.
           MSG
@@ -24,16 +25,28 @@ module Torque
           klass.new(context)
         end
 
+        def presets
+          @presets ||= Hash.new { |hash, key| hash[key] = {} }
+        end
+
+        def add_preset(source, name, **options)
+          presets[source.to_sym][name.to_sym] = options
+        end
+
         def enable_framework(name, base: UiBuilder)
           add_framework(name, Elements.ui_framework_helper(name), base: base)
         end
 
         def add_framework(name, mod, base: UiBuilder)
-          raise ::ArgumentError.new(<<~MSG.squish) unless base <= UiBuilder
+          raise ::ArgumentError, <<~MSG.squish unless base <= UiBuilder
             #{base} class must be a subclass of UiBuilder.
           MSG
 
-          framework_classes[normalize_name(name)] = Class.new(base).tap { |klass| klass.include(mod) }
+          framework_classes[normalize_name(name)] = Class.new(base).tap do |klass|
+            klass.include(mod)
+
+            mod.try(:presets)&.each { |name, presets| klass.presets[name].reverse_merge!(presets) }
+          end
         end
 
         def name_of(instance = self)
@@ -43,7 +56,7 @@ module Torque
         alias framework_name name_of
 
         def inspect
-          if self.eql?(UiBuilder)
+          if eql?(UiBuilder)
             "#<Torque::Elements::UiBuilder (base class) @frameworks=[#{framework_classes.keys.join(', ')}]>"
           else
             "#<Torque::Elements::UiBuilder (base class) @framework=#{framework_name}>"
@@ -55,8 +68,6 @@ module Torque
           def normalize_name(name)
             name.to_s.underscore.freeze
           end
-
-        protected
 
           def framework_classes
             @@framework_classes ||= {}
@@ -85,10 +96,14 @@ module Torque
         options&.each_with_object(current) { |(key, value), combined| combine_option(key, combined, value) }
       end
 
-      def flatten_options(options, prefix = '')
-        return unless options.present?
+      def build_options(*settings)
+        settings.flatten.each_with_object({}) do |input, options|
+          combine_options(options, flatten_options(input)) if input.present?
+        end
+      end
 
-        options.each_with_object({}) do |(key, value), result|
+      def flatten_options(options, prefix = '')
+        options.presence&.each_with_object({}) do |(key, value), result|
           attr = attribute_name("#{prefix}#{key}")
           if value.is_a?(Hash) && !Elements.static_attribute?(attr)
             result.merge!(flatten_options(value, "#{prefix}#{key}-"))
@@ -98,6 +113,37 @@ module Torque
             result[attr] = value
           end
         end
+      end
+
+      def render_content_tag(tag_name, content = nil, options = {}, &block)
+        content = view_context.capture(&block) if block_given?
+        combine_option('@content', options, content) if content.present?
+        render_tag(tag_name, options, with_content: true)
+      end
+
+      def render_tag(tag_name, options = {}, with_content: false)
+        options = collapse_options(options)
+        left, *inner, right = options.delete('@content')&.values_at(:prepend, :before, :content, :after, :append)
+        content = view_context.safe_join(inner.flatten) if with_content && inner.present?
+        view_context.safe_join([*left, tag_builder.public_send(tag_name, *content, **options), *right])
+      end
+
+      def split_options_properties(source, property_list, preset_list = nil, kwargs = {})
+        properties = {}.with_indifferent_access
+        options = (fetch_presets(:default, *preset_list, from: source) << kwargs).each_with_object({}) do |input, result|
+          next if input.blank?
+
+          properties.merge!(input.extract!(*property_list))
+          combine_options(result, flatten_options(input))
+        end
+
+        [options, properties]
+      end
+
+      def fetch_presets(*list, from:)
+        return [] if (source = presets[from]).nil?
+
+        list.filter_map { |name| source[name].dup }
       end
 
       def inspect

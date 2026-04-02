@@ -41,10 +41,10 @@ module Torque
           super(ActionView::PathSet.new(set.paths.sort_by { |path| path.is_a?(Resolver) ? 1 : -1 }))
         end
 
-        def _build_template_paths(paths)
+        def _build_template_path(path)
           ActionView::PathRegistry.instance_exec do
             @file_system_resolver_mutex.synchronize do
-              Array.wrap(paths).map { |path| @file_system_resolvers[path] ||= Resolver.new(path) }
+              @file_system_resolvers[path] ||= Resolver.new(path)
             ensure
               file_system_resolver_hooks.each(&:call)
             end
@@ -52,11 +52,11 @@ module Torque
         end
 
         def append_template_path(path)
-          append_view_path(_build_template_paths(path)) unless path.respond_to?(:exist?) && !path.exist?
+          append_view_path(_build_template_path(path))
         end
 
         def prepend_template_path(path)
-          prepend_view_path(_build_template_paths(path)) unless path.respond_to?(:exist?) && !path.exist?
+          prepend_view_path(_build_template_path(path))
         end
       end
 

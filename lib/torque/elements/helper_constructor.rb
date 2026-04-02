@@ -7,12 +7,13 @@ module Torque
       attr_reader :presets
 
       def compile_pending!
-        source = +"# frozen_string_literal: true\n"
-        while instance = (@pending.shift)&.last
+        source = +''
+        while (instance = @pending.shift&.last)
           source << instance.compile(@presets, @shared)
         end
 
-        module_eval(source) unless source.empty?
+        # TODO: Maybe use a temp file/dir for development to get better backtraces?
+        module_eval(source, "virtual: #{name.demodulize.underscore}/helpers.rb") unless source.empty?
       end
 
       def clear!
@@ -23,8 +24,8 @@ module Torque
 
         def load_definitions(path)
           source = caller_locations(1, 1).first.path
-          path = File.expand_path(File.join(source, '..', path) + '.rb')
-          module_eval(File.read(path))
+          path = File.expand_path(File.join(source, '..', path) << '.rb')
+          module_eval(File.read(path), path, 1)
         end
 
         def shared(property, &block)
@@ -32,15 +33,13 @@ module Torque
         end
 
         def define(name, with_content: true, compile: Elements.auto_compile_on_define, &block)
-          instance = @pending[name = name.to_sym] ||= begin
-            HelperBuilder.new(name, with_content: with_content)
-          end
+          instance = @pending[name = name.to_sym] ||= HelperBuilder.new(name, with_content: with_content)
 
           block.call(instance)
           return unless compile
 
           @pending.delete(name)
-          module_eval("# frozen_string_literal: true\n#{instance.compile(@presets, @shared)}")
+          compile_content(instance.compile(@presets, @shared))
         end
 
         def associate(name, to:, compile: Elements.auto_compile_on_define, **extensions)
@@ -48,16 +47,20 @@ module Torque
           return unless compile
 
           @pending.delete(name)
-          module_eval("# frozen_string_literal: true\n#{instance.compile}")
+          compile_content(instance.compile)
         end
 
       private
+
+        def compile_content(content, path = nil)
+          args = [path, 1] if path
+          module_eval("# frozen_string_literal: true\n#{content}", *args)
+        end
 
         def self.extended(base)
           base.instance_variable_set(:@presets, {})
           base.instance_variable_set(:@pending, {})
           base.instance_variable_set(:@shared, Hash.new { |h, k| h[k] = [] })
-          base.delegate(:presets, to: base.name)
         end
 
     end

@@ -27,12 +27,6 @@ module Torque
       initializer 'torque-admin.railtie_setup' do
         ::Rails::Railtie::ABSTRACT_RAILTIES << 'Torque::Admin::Engine'
       end
-
-      initializer 'torque-admin.action_controller_setup' do
-        ActiveSupport.on_load(:action_controller) do
-          append_view_path Admin::APP_DIR.join('views') if respond_to?(:append_view_path)
-        end
-      end
     end
   end
 end

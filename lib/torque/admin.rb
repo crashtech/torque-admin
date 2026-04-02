@@ -17,6 +17,8 @@ module Torque
     autoload :Engine
 
     # App-like Constants
+    autoload :ApplicationHelper, APP_DIR.join('helpers', 'application_helper')
+
     autoload :BaseController, APP_DIR.join('controllers', 'base_controller')
     autoload :ResourceController, APP_DIR.join('controllers', 'resource_controller')
     autoload :DashboardController, APP_DIR.join('controllers', 'dashboard_controller')

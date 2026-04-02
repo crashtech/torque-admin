@@ -8,6 +8,7 @@ module Torque
         @separator = separator
         @nested_separator = nested_separator
         @unique = unique
+        super()
       end
 
       def combine(current, value)

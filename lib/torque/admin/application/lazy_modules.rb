@@ -12,7 +12,11 @@ module Torque
 
         class << self
           def fetch_base_controller(mod)
-            mod.admin_application.base_controller
+            klass = Class.new(mod.admin_application.config.base_controller!.constantize)
+            klass.define_singleton_method(:admin_application, &mod.method(:admin_application))
+            klass.include(Admin::BaseController)
+            klass.abstract!
+            klass
           end
 
           def build_controller(mod, extension)
@@ -29,6 +33,7 @@ module Torque
 
         def const_missing(name)
           return super if (handler, *args = MODULES[name]).nil?
+
           const_set(name, LazyModules.public_send(handler, self, *args))
         end
       end
