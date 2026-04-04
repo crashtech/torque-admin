@@ -1,13 +1,12 @@
 # frozen_string_literal: true
 
-require 'active_support/configurable'
-
 require_relative 'elements'
 require_relative 'forms'
 
 require_relative 'admin/version'
 
 module Torque
+  # = Torque Admin
   module Admin
     APP_DIR = Pathname.new(__dir__).join('../../app').freeze
 
@@ -23,6 +22,7 @@ module Torque
     autoload :ResourceController, APP_DIR.join('controllers', 'resource_controller')
     autoload :DashboardController, APP_DIR.join('controllers', 'dashboard_controller')
 
+    # = Torque Admin \Themes
     module Themes
       extend ActiveSupport::Autoload
 

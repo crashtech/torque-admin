@@ -16,14 +16,16 @@ module Torque
         private
 
           def find_or_initialize_precompiled(*keys, &block)
-            name = precompiled_name(keys.hash)
+            name = precompiled_name(keys.hash).freeze
             container = compiled_method_container
 
             if container.instance_variable_defined?(name)
               container.instance_variable_get(name)
-            else
+            elsif (content = capture(&block)).present?
               # TODO: Swap the current protection to template mode
-              container.instance_variable_set(name, capture(&block))
+              container.instance_variable_set(name, content)
+            else
+              raise ArgumentError, +'Block provided did not produce any content'
             end
           end
 

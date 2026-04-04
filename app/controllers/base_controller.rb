@@ -7,6 +7,7 @@ module Torque
 
       include Elements::Frame
       include Elements::Templates
+      include Elements::Controller
 
       delegate :admin_application, :admin_config, :ui_framework, to: :class
 
@@ -20,11 +21,35 @@ module Torque
       class_methods do
         delegate :config, to: :admin_application, prefix: true
 
+        def element_helper_name(name)
+          "#{abstract? || anonymous? ? 'app' : admin_controller_name}_#{name}"
+        end
+
         def ui_framework
           admin_application.ui_builder.framework_name
         end
+
+        def admin_controller_name
+          name.gsub(/\A(?:#{"#{admin_application.mod.name}::"})?(.*)Controller\z/, '\1').underscore.tr('/', '_')
+        end
+
+        ## Quick Elements Definers
+
+        def main_menu(**kwargs, &block)
+          element(:main_menu, as: :menu, **kwargs, &block)
+        end
       end
 
+      protected
+
+        def elements_i18n_keys_for(*)
+          [
+            "#{admin_application.name}.%<name>s.%<type>s.%<id>s",
+            "#{admin_application.name}.%<name>s.%<id>s",
+            '%<name>s.%<type>s.%<id>s',
+            '%<name>s.%<id>s',
+          ]
+        end
     end
   end
 end

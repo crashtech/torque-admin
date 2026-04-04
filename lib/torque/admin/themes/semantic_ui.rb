@@ -23,10 +23,39 @@ module Torque
           render_content_tag(:body, nil, options, &content)
         end
 
-        def app_banner(content, **kwargs)
+        def application_banner(content, **kwargs)
           options = build_options({ class: 'header item' }, kwargs)
           render_content_tag(:div, content, options)
         end
+
+
+
+        def menu(**kwargs, &content)
+          options = build_options({ class: 'ui menu' }, kwargs)
+          render_content_tag(:div, nil, options, &content)
+        end
+
+        def menu_item(**kwargs, &content)
+          class_name = content.present? ? 'header item' : 'item'
+          options = build_options({ class: class_name }, kwargs)
+
+          link = link_to(options.delete('label'), options.delete('href'), options)
+          return link if content.nil?
+
+          content_tag(:div, class: 'item') do
+            concat link
+            concat content_tag(:div, class: 'menu', &content)
+          end
+        end
+
+        def menu_header(**kwargs, &content)
+          options = build_options({ class: 'header' }, kwargs)
+          content_tag(:div, class: 'item') do
+            concat content_tag(:div, options.delete('label'), options)
+            concat content_tag(:div, class: 'menu', &content)
+          end
+        end
+
       end
     end
   end

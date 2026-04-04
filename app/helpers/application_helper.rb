@@ -15,7 +15,7 @@ module Torque
       end
 
       def app_banner(title = app_plain_title, **kwgargs)
-        ui.app_banner(title, **kwgargs)
+        ui.application_banner(title, **kwgargs)
       end
 
       def app_body_classes
