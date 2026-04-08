@@ -9,7 +9,7 @@ module Torque
       include Elements::Templates
       include Elements::Controller
 
-      delegate :admin_application, :admin_config, :ui_framework, to: :class
+      delegate :admin_application, :admin_config, :admin_controller_name, :ui_framework, to: :class
 
       included do
         append_view_path(Admin::APP_DIR.join('views'))
@@ -29,8 +29,8 @@ module Torque
           admin_application.ui_builder.framework_name
         end
 
-        def admin_controller_name
-          name.gsub(/\A(?:#{"#{admin_application.mod.name}::"})?(.*)Controller\z/, '\1').underscore.tr('/', '_')
+        def admin_controller_name(namespace: '_')
+          name.gsub(/\A(?:#{"#{admin_application.mod.name}::"})?(.*)Controller\z/, '\1').underscore.tr('/', namespace)
         end
 
         ## Quick Elements Definers
@@ -40,16 +40,14 @@ module Torque
         end
       end
 
-      protected
-
-        def elements_i18n_keys_for(*)
-          [
-            "#{admin_application.name}.%<name>s.%<type>s.%<id>s",
-            "#{admin_application.name}.%<name>s.%<id>s",
-            '%<name>s.%<type>s.%<id>s',
-            '%<name>s.%<id>s',
-          ]
-        end
+      def elements_i18n_keys_for(*)
+        [
+          "#{admin_application.name}.%<name>s.%<type>s.%<id>s",
+          "#{admin_application.name}.%<name>s.%<id>s",
+          '%<name>s.%<type>s.%<id>s',
+          '%<name>s.%<id>s',
+        ]
+      end
     end
   end
 end

@@ -19,7 +19,7 @@ module Torque
       def collapse(*values)
         result = {}
 
-        each_value(values.flatten) do |key, value|
+        each_value(values) do |key, value|
           if value
             result[format(key)] = value
           else
@@ -34,6 +34,8 @@ module Torque
 
       def each_value(input, prefix: '', &block)
         case input
+        when NilClass
+          # Do nothing for nil values
         when Hash
           input.each { |key, value| each_value(value, prefix: prefix + key.to_s + @nested_separator, &block) }
         when Enumerable

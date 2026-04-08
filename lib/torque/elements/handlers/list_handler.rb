@@ -18,7 +18,7 @@ module Torque
       def collapse(*values)
         result = @unique ? Set.new : []
 
-        each_value(values.flatten) do |value, key = nil|
+        each_value(values) do |value, key = nil|
           case value
           when String then result << value
           when TrueClass then result << key.to_s
@@ -31,6 +31,8 @@ module Torque
 
       def each_value(input, prefix: '', &block)
         case input
+        when NilClass
+          # Do nothing for nil values
         when Hash
           input.each { |key, value| each_value(value, prefix: prefix + key.to_s + @nested_separator, &block) }
         when Enumerable

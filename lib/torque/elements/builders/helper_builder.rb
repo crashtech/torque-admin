@@ -51,7 +51,7 @@ module Torque
 
       def property(name)
         swap_current(name = name.to_sym)
-        start_operation(name, true) if @properties.add?(name)
+        start_operation(name, as_property: true) if @properties.add?(name)
         self
       end
 
@@ -144,7 +144,7 @@ module Torque
           @current = @operations[scope] ||= []
         end
 
-        def start_operation(op, as_property = false)
+        def start_operation(op, as_property: false)
           op = "_properties[:#{op}]" if as_property
           @current << 'end'
           @current << "if (value = #{op})"
@@ -159,7 +159,7 @@ module Torque
               @operations.insert(2, *@current)
             else
               operations, @current = @current, []
-              start_operation(prop, true)
+              start_operation(prop, as_property: true)
               @operations[prop] = @current + operations
             end
           end

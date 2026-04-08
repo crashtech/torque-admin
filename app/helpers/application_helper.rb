@@ -28,8 +28,11 @@ module Torque
       end
 
       def app_controller_class_name
-        name = controller.class.name.delete_prefix("#{admin_application.mod.name}::")
-        name.underscore.dasherize.gsub('/', '--')
+        controller.admin_controller_name(namespace: '--').concat('-controller').dasherize
+      end
+
+      def app_main_menu(*args, **kwargs)
+        ui.application_main_menu(*args, **kwargs)
       end
     end
   end

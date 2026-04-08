@@ -9,32 +9,37 @@ module Torque
 
         TEXT_ATTRIBUTES = (%i[alt label placeholder title] + %w[alt label placeholder title]).freeze
 
-        def to_s
-          return @renderer.call(self) if @renderer.present?
-          return @context.public_send(@helper_name, self) if @context.respond_to?(@helper_name)
-
-          options = @options.dup
-          sanitize_options(:root, element_type, options)
-          renderer_method.call(**options, &method(:content))
+        def initialize
+          @helper_name = @options.delete(:helper_method) || @controller.element_helper_name(name)
+          @content_only = @options.delete(:content_only) || false
         end
 
-        alias to_html to_s
+        def content_only?
+          @content_only
+        end
 
-        def content
-          traverse do |type, options, content|
-            args = extract_arguments(type, options)
-            renderer_method(type).call(*args, **options, &content)
+        def render_in(context, &block)
+          return render_with_helper(context) unless block_given?
+
+          result = traverse do |node, content|
+            content = context.safe_join(content) if content
+            render_node(node.id.underscore, node.type, content, node.options, &block)
           end
+
+          result = context.safe_join(result) if result
+          return result if content_only?
+
+          render_node('root', element_type, result, options, &block)
+        end
+
+        def render_with_helper(context, helper = @helper_name)
+          context.respond_to?(helper) ? context.public_send(helper, self) : context.ui.public_send(helper, self)
         end
 
         protected
 
           def extract_arguments(type, options)
             # By default, no arguments are extracted
-          end
-
-          def sanitize_node_options(node)
-            sanitize_options(node.id.underscore, node.type, node.options)
           end
 
           def sanitize_options(id, type, options)
@@ -46,12 +51,12 @@ module Torque
           def text_for(value, type, subpart = nil, fallback: nil)
             values = { name: i18n_name, type: type, id: value }
             keys = map_i18n_keys(subpart) { |key| format(key, values).to_sym }
-            keys << text_for_fallback(fallback) if fallback.present?
+            keys << text_for_fallback(fallback, type) if fallback.present?
             ::I18n.translate(keys.shift, default: keys)
           end
 
-          def text_for_fallback(value)
-            value.to_s.underscore.humanize
+          def text_for_fallback(value, *)
+            value.is_a?(String) ? value : value.to_s.underscore.humanize
           end
 
           def i18n_name
@@ -59,17 +64,16 @@ module Torque
           end
 
           def i18n_keys
-            @i18n_keys ||= @context.elements_i18n_keys_for(self)
+            @i18n_keys ||= @controller.elements_i18n_keys_for(self)
           end
 
         private
 
-          def renderer_method(type = nil)
-            (@methods ||= {})[type] ||= begin
-              type = "_#{type}" if type
-              specific, general = [name, element_type].product([type]).map(&:join)
-              @context.ui.method(@context.ui.respond_to?(specific) ? specific : general)
-            end
+          def render_node(id, type, content, options, &block)
+            options = options.dup
+            sanitize_options(id, type, options)
+            args = extract_arguments(type, options)
+            block.call(type, content, *args, **options)
           end
 
           def map_i18n_keys(subpart)

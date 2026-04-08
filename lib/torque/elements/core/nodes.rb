@@ -7,39 +7,36 @@ module Torque
       module Nodes
         extend ActiveSupport::Concern
 
-        def move(key, before: nil, after: nil, prepend_to: nil, append_to: nil)
-          return unless (node = self[key])
+        def move(node, **options)
+          node = self[node] unless node.is_a?(Core::Node)
+          return unless node
 
           remove_node(node)
-          if prepend_to && (prepend_to == :root || (ref = self[prepend_to]))
-            (ref&.children || nodes).unshift(node)
-          elsif append_to && (append_to == :root || (ref = self[append_to]))
-            (ref&.children || nodes).push(node)
-          else
-            add_on_position(node, { before: before, after: after })
-          end
+          add_on_position(node, options)
         end
 
         def traverse(list = nodes, max_depth: @max_depth || Float::INFINITY, &block)
           return if list.empty? || max_depth <= 0
 
           list.map do |node|
-            content = -> { traverse(node.children, max_depth: max_depth - 1, &block) } unless node.leaf?
+            if node.branch?
+              max_depth = node.skip_depth? ? max_depth : max_depth - 1
+              content = traverse(node.children, max_depth: max_depth, &block)
+            end
 
-            sanitize_node_options(node)
-            block.call(node.type, node.options, content)
-          end.then(&@context.method(:safe_join))
+            block.call(node, content)
+          end
         end
 
-        def pretty_inspect(output = ''.dup, ident = 2, list = nodes.reverse)
+        def pretty_inspect(output = ''.dup, ident = 2, list = nodes.dup)
           output << inspect << "\n"
-          while (item = list.pop)
+          while (item = list.shift)
             next ident = item if item.is_a?(Integer)
 
             output << (' ' * ident) << item.inspect << "\n"
 
             unless item.leaf?
-              list.push(ident, *item.children.reverse)
+              list.unshift(*item.children.dup, ident)
               ident += 2
             end
           end
@@ -48,10 +45,6 @@ module Torque
         end
 
         protected
-
-          def node_id(value)
-            value.to_s.downcase.gsub(/[_\s]/, '-').gsub(/[^-a-z0-9]/, '')
-          end
 
           def add_node(node)
             add_on_position(node) || (@current&.children || nodes) << node
@@ -67,17 +60,30 @@ module Torque
           end
 
           def add_on_position(node, options = node.options)
-            %i[after before].find do |key|
+            %i[after before prepend append prepend_to append_to].find do |key|
               next unless options[key].is_a?(Symbol)
-              next unless (ref = self[options.delete(key)])
+              next unless (ref = ref_to_node(options.delete(key)))
 
-              add = key == :after ? 1 : 0
-              source = ref.parent&.children || nodes
-              break source.insert(source.index(ref) + add, node)
+              break add_on_position!(node, ref, key)
             end
           end
 
         private
+
+          def ref_to_node(value)
+            [true, :root].include?(value) ? self : self[value]
+          end
+
+          def add_on_position!(node, ref, operation)
+            case operation
+            when :prepend, :prepend_to then ref.children.unshift(node)
+            when :append, :append_to then ref.children.push(node)
+            when :before, :after
+              add = operation == :after ? 1 : 0
+              parent = ref.parent&.children || nodes
+              parent.insert(parent.index(ref) + add, node)
+            end
+          end
 
           def nodes
             @nodes ||= []

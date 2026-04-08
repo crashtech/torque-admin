@@ -11,9 +11,11 @@ module Torque
         @instances = {}
       end
 
-      def [](name, **kwargs, &block)
-        @instances[name] ||= _find(name).call(_context, **kwargs, &block)
+      def fetch(name, *args, **kwargs, &block)
+        @instances[name] ||= _find(name).call(@controller, *args, **kwargs, &block)
       end
+
+      alias [] fetch
 
       def respond_to?(name)
         @instances.key?(name) || _find(name).is_a?(::Proc)
@@ -29,11 +31,11 @@ module Torque
         respond_to?(name)
       end
 
-      def method_missing(name, *, **kwargs, &block)
+      def method_missing(name, *args, **kwargs, &block)
         if name.end_with?('?')
           respond_to?(name[0..-2])
         else
-          self[name, **kwargs, &block]
+          fetch(name, *args, **kwargs, &block)
         end
       end
 
@@ -55,10 +57,6 @@ module Torque
           end
 
           ::Kernel.raise NotFound, "Element #{name} not found in #{@controller.class}"
-        end
-
-        def _context
-          @context ||= @controller.view_context
         end
 
     end

@@ -24,37 +24,44 @@ module Torque
         end
 
         def application_banner(content, **kwargs)
-          options = build_options({ class: 'header item' }, kwargs)
-          render_content_tag(:div, content, options)
+          menu_header(content, **kwargs)
         end
 
+        def application_main_menu(*args, **kwargs)
+          element = elements.fetch(:main_menu, *args, **kwargs)
+          element.render_in(self) do |node_type, content, *, **kwargs|
+            next submenu(content, **kwargs) if node_type == :submenu
 
+            if node_type == :menu
+              if element.is?(:vertical)
+                kwargs[:class] = [kwargs[:class], 'left']
+                kwargs[:style] = [kwargs[:style], { margin: 0, border_radius: 0 }]
+              end
 
-        def menu(**kwargs, &content)
-          options = build_options({ class: 'ui menu' }, kwargs)
-          render_content_tag(:div, nil, options, &content)
-        end
+              next menu(content, **kwargs)
+            end
 
-        def menu_item(**kwargs, &content)
-          class_name = content.present? ? 'header item' : 'item'
-          options = build_options({ class: class_name }, kwargs)
+            label = kwargs.delete(:label)
+            menu_link_options(kwargs) if kwargs[:href].present?
+            next public_send("menu_#{node_type}", label, **kwargs) if content.blank?
 
-          link = link_to(options.delete('label'), options.delete('href'), options)
-          return link if content.nil?
+            kwargs[:after] = [*kwargs[:after], content]
+            kwargs[:class] = [kwargs[:class], { header: false }]
+            kwargs[:dropdown] = true
 
-          content_tag(:div, class: 'item') do
-            concat link
-            concat content_tag(:div, class: 'menu', &content)
+            next menu_header(label, **kwargs) if node_type == :header
+
+            options = kwargs.extract!(:after, :dropdown, :prepend, :append)
+            menu_item(menu_item(label, **kwargs), **options)
           end
         end
 
-        def menu_header(**kwargs, &content)
-          options = build_options({ class: 'header' }, kwargs)
-          content_tag(:div, class: 'item') do
-            concat content_tag(:div, options.delete('label'), options)
-            concat content_tag(:div, class: 'menu', &content)
+        private
+
+          def menu_link_options(options)
+            options[:href] = url_for(options[:href]) if options[:href].present?
+            options[:class] = [options[:class], { active: view_context.current_page?(options[:href]) }]
           end
-        end
 
       end
     end

@@ -1,7 +1,5 @@
 <%= ui.body(:classic) do %>
-  <header class="ui menu">
-    <%= app_banner %>
-  </header>
+  <%= app_main_menu(as: :header, before: app_banner) %>
 
   <main class="ui container" style="flex: 1; padding: 1rem 0;">
     <%= yield %>

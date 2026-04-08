@@ -1,7 +1,5 @@
 <%= ui.body(:sidebar) do %>
-  <header class="ui left vertical menu" style="margin: 0; border-radius: 0;">
-    <%= app_banner %>
-  </header>
+  <%= app_main_menu(:vertical, as: :header, before: app_banner) %>
 
   <main style="flex: 1; display: flex; flex-direction: column;">
     <div style="flex: 1; padding: 1rem 2rem;">
