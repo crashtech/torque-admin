@@ -5,21 +5,22 @@ module Torque
     module Themes
       module SemanticUI
         include Elements::Helpers::SemanticUI
+        # TODO: include Elements::Visitors
 
-        def self.presets
-          Elements::Helpers::SemanticUI.presets.deep_merge(
+        def self.elements_presets
+          {
             body: {
               default: { style: { min_height: '100vh' } },
               classic: { style: { display: :flex, flex_direction: :column } },
               sidebar: { style: { display: :flex } },
               modern: { style: { display: :flex, flex_direction: :column } },
             },
-          )
+          }
         end
 
         def body(preset, **kwargs, &content)
           options = build_options(fetch_presets(:default, preset, from: :body) << kwargs)
-          combine_option('class', options, [preset, *app_body_classes])
+          combine_option('class', options, [preset, app_body_classes])
           render_content_tag(:body, nil, options, &content)
         end
 

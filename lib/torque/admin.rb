@@ -15,13 +15,6 @@ module Torque
     autoload :Application
     autoload :Engine
 
-    # App-like Constants
-    autoload :ApplicationHelper, APP_DIR.join('helpers', 'application_helper')
-
-    autoload :BaseController, APP_DIR.join('controllers', 'base_controller')
-    autoload :ResourceController, APP_DIR.join('controllers', 'resource_controller')
-    autoload :DashboardController, APP_DIR.join('controllers', 'dashboard_controller')
-
     # = Torque Admin \Themes
     module Themes
       extend ActiveSupport::Autoload
@@ -41,6 +34,23 @@ module Torque
       def instances
         @instances ||= {}
       end
+
+      private
+
+        def app_autoload(const_name)
+          folder = ActiveSupport::Inflector.pluralize(const_name.to_s.match(/[A-Z][a-z]+\z/).to_s.downcase)
+          autoload(const_name, APP_DIR.join(folder, ActiveSupport::Inflector.underscore(const_name)))
+        end
+    end
+
+    eager_autoload do
+      app_autoload :BaseController
+      app_autoload :ResourceController
+      app_autoload :DashboardController
+
+      app_autoload :MenuElement
+
+      app_autoload :ApplicationHelper
     end
   end
 end

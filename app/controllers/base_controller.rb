@@ -14,6 +14,7 @@ module Torque
       included do
         append_view_path(Admin::APP_DIR.join('views'))
         helper(Admin::ApplicationHelper)
+        helper_method(:ui_framework)
         layout(admin_application.name.to_s)
         frame('classic')
       end
@@ -31,6 +32,16 @@ module Torque
 
         def admin_controller_name(namespace: '_')
           name.gsub(/\A(?:#{"#{admin_application.mod.name}::"})?(.*)Controller\z/, '\1').underscore.tr('/', namespace)
+        end
+
+        def element_constructor_for(name)
+          name = name.to_s unless name.is_a?(::String)
+          name = name.camelize
+          name += 'Element' unless name.end_with?('Element')
+
+          admin_application_config.elements_lookup_context.reverse_each.find do |mod_name|
+            "#{mod_name}::#{name}".safe_constantize&.then { |klass| return klass }
+          end
         end
 
         ## Quick Elements Definers

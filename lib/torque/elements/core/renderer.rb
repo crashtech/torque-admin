@@ -10,30 +10,11 @@ module Torque
         TEXT_ATTRIBUTES = (%i[alt label placeholder title] + %w[alt label placeholder title]).freeze
 
         def initialize
-          @helper_name = @options.delete(:helper_method) || @controller.element_helper_name(name)
-          @content_only = @options.delete(:content_only) || false
+          @settings = @options.extract!(:helper_method, :max_depth, :min_depth)
         end
 
-        def content_only?
-          @content_only
-        end
-
-        def render_in(context, &block)
-          return render_with_helper(context) unless block_given?
-
-          result = traverse do |node, content|
-            content = context.safe_join(content) if content
-            render_node(node.id.underscore, node.type, content, node.options, &block)
-          end
-
-          result = context.safe_join(result) if result
-          return result if content_only?
-
-          render_node('root', element_type, result, options, &block)
-        end
-
-        def render_with_helper(context, helper = @helper_name)
-          context.respond_to?(helper) ? context.public_send(helper, self) : context.ui.public_send(helper, self)
+        def helper_method
+          @settings.fetch(:helper_method) { @controller.element_helper_name(name) }
         end
 
         protected
@@ -44,15 +25,26 @@ module Torque
 
           def sanitize_options(id, type, options)
             options.extract!(*TEXT_ATTRIBUTES).each do |key, value|
-              options[key] = text_for(id, type, key, fallback: value)
+              value = text_for(id, type, key, fallback: value)
+              options[key] = value unless value.nil?
             end
           end
 
+          def sanitize_text_for(node, option)
+            current = node.options[option]
+            return current if static_text?(current)
+
+            node.options[option] = text_for(node.id, node.type, option, fallback: current)
+          end
+
           def text_for(value, type, subpart = nil, fallback: nil)
+            return fallback if static_text?(fallback)
+
             values = { name: i18n_name, type: type, id: value }
             keys = map_i18n_keys(subpart) { |key| format(key, values).to_sym }
-            keys << text_for_fallback(fallback, type) if fallback.present?
-            ::I18n.translate(keys.shift, default: keys)
+            ::I18n.translate(keys.shift, default: keys, raise: true).freeze
+          rescue ::I18n::MissingTranslationData
+            text_for_fallback(fallback, type).freeze if fallback.present?
           end
 
           def text_for_fallback(value, *)
@@ -69,11 +61,8 @@ module Torque
 
         private
 
-          def render_node(id, type, content, options, &block)
-            options = options.dup
-            sanitize_options(id, type, options)
-            args = extract_arguments(type, options)
-            block.call(type, content, *args, **options)
+          def static_text?(value)
+            value.is_a?(String) && value.frozen?
           end
 
           def map_i18n_keys(subpart)

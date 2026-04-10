@@ -13,9 +13,8 @@ module Torque
       delegate_missing_to :view_context
 
       class << self
-        def new(context)
+        def new(context, framework: nil)
           return super if self != UiBuilder
-          return super if (framework = context.try(:controller).try(:ui_framework)).blank?
 
           raise MissingFrameworkError, <<~MSG.squish unless (klass = framework_classes[normalize_name(framework)])
             No UI framework named '#{framework}'.
@@ -33,6 +32,21 @@ module Torque
           presets[source.to_sym][name.to_sym] = options
         end
 
+        def import_presets(source)
+          source.each { |name, values| presets[name].merge!(values) }
+        end
+
+        def import_presets_from(mod, method_name: :elements_presets)
+          mod.try(:compile_elements_helpers!)
+          import_presets(mod.elements_presets) if mod.respond_to?(method_name)
+        end
+
+        ## Framework management
+
+        def framework_enabled?(name)
+          framework_classes.key?(normalize_name(name))
+        end
+
         def enable_framework(name, base: UiBuilder)
           add_framework(name, Elements.ui_framework_helper(name), base: base)
         end
@@ -44,8 +58,6 @@ module Torque
 
           framework_classes[normalize_name(name)] = Class.new(base).tap do |klass|
             klass.include(mod)
-
-            mod.try(:presets)&.each { |name, presets| klass.presets[name].reverse_merge!(presets) }
           end
         end
 
@@ -61,6 +73,16 @@ module Torque
           else
             "#<Torque::Elements::UiBuilder (base class) @framework=#{framework_name}>"
           end
+        end
+
+        # Hook into the include process to import presets
+        def include(*modules)
+          modules.each do |mod|
+            mod.included_modules.each(&method(:import_presets_from))
+            import_presets_from(mod)
+          end
+
+          super
         end
 
         protected

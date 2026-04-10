@@ -13,6 +13,8 @@ module Torque
     autoload :Controller
 
     autoload :Base
+    autoload :Node
+    autoload :Traverse
     autoload :Registry
 
     autoload :Helpers
@@ -33,20 +35,12 @@ module Torque
       autoload :HelperBuilder
     end
 
-    autoload_under :builtin do
-      autoload :Menu
-    end
-
     ## Settings
     mattr_accessor :auto_compile_on_define, default: false
 
     class << self
       def logger
         ActionView::Base.logger
-      end
-
-      def type_for(name)
-        @types.fetch(name).constantize
       end
 
       def attribute_name(name)
@@ -78,10 +72,6 @@ module Torque
 
       ## Quick access to configuration methods
 
-      def add_type(name, klass)
-        types[name.freeze] = klass.is_a?(Module) ? klass.name : klass
-      end
-
       def enable_ui_framework(*args, **kwargs)
         UiBuilder.enable_framework(*args, **kwargs)
       end
@@ -96,10 +86,6 @@ module Torque
 
       private
 
-        def types
-          @types ||= {}
-        end
-
         def attributes
           @attributes ||= { static: Concurrent::Map.new, dynamic: {} }.freeze
         end
@@ -108,8 +94,6 @@ module Torque
           @default_attribute ||= BaseHandler.new
         end
     end
-
-    add_type :menu, 'Torque::Elements::Menu'
   end
 end
 

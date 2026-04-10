@@ -5,8 +5,6 @@ module Torque
     module Helpers
       # = Torque Elements \UI Helpers
       module UiHelper
-        attr_reader :current_element
-
         def ui
           ui_builder
         end
@@ -14,7 +12,7 @@ module Torque
         private
 
           def ui_builder
-            @ui_builder ||= UiBuilder.new(self)
+            @ui_builder ||= UiBuilder.new(self, framework: ui_framework)
           end
       end
     end

@@ -19,9 +19,9 @@ module Torque
             klass
           end
 
-          def build_controller(mod, extension)
+          def build_controller(mod, *extensions)
             klass = Class.new(mod.const_get(:BaseController))
-            klass.include(extension.constantize)
+            klass.include(*extensions.map(&:constantize))
             klass.abstract!
             klass
           end

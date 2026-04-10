@@ -1,0 +1,67 @@
+# frozen_string_literal: true
+
+module Torque
+  module Admin
+    # = Torque Admin \Menu Element
+    class MenuElement < Elements::Base
+      def initialize(*args, sort: nil, **options, &block)
+        @sort = sort
+        super(*args, **options, &block)
+      end
+
+      ## Define elements
+
+      def item(identifier, href_or_label = nil, href = nil, **options, &block)
+        reindex(identifier, node_id("#{identifier}-container")) if key?(identifier) && !key?("#{identifier}-container")
+
+        href, href_or_label = href_or_label, nil if href.nil?
+        add_node(identifier, :item, label: href_or_label || identifier, href: href, **options, &block)
+      end
+
+      ## Renderer
+
+      def text_for_fallback(value, *)
+        value.is_a?(String) ? value : value.to_s.underscore.titleize
+      end
+
+      ## Overrides
+
+      def define(*)
+        @sort ? super.tap { apply_sorting!(@sort) } : super
+      end
+
+      ## Others
+
+      def links
+        index.each_value.select { |node| node.options[:href] }
+      end
+
+      def apply_sorting!(mode = @sort)
+        sortable_lists(mode).each { |list| list.sort_by! { |node| label_for(node) } }
+      end
+
+      def label_for(node)
+        sanitize_text_for(node.is_a?(Elements::Node) ? node : self[node], :label)
+      end
+
+      protected
+
+        # TODO: Make this generic to sort by depth number filtered by types
+        def sortable_lists(mode)
+          return [nodes] if mode == :root
+
+          queue = [*nodes]
+          result = mode == :children ? [] : [nodes]
+
+          while queue.any?
+            current = queue.shift
+            queue += current.children if current.branch?
+            result << current.children
+          end
+
+          result
+        end
+
+    end
+  end
+end

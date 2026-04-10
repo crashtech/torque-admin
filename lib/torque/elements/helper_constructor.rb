@@ -6,25 +6,25 @@ module Torque
     module HelperConstructor
       attr_reader :presets
 
-      def compile_pending!
+      def compile_elements_helpers!
+        return if @pending.nil?
+
         source = +''
         while (instance = @pending.shift&.last)
-          source << instance.compile(@presets, @shared)
+          source << instance.compile(@presets, @shared) << "\n"
         end
 
-        # TODO: Maybe use a temp file/dir for development to get better backtraces?
-        module_eval(source, "virtual: #{name.demodulize.underscore}/helpers.rb") unless source.empty?
-      end
-
-      def clear!
-        @shared = @pending = nil
+        source.prepend("def self.elements_presets; #{@presets.inspect}; end\n\n") if @presets.any?
+        compile_content(source) unless source.empty?
+      ensure
+        @presets = @pending = @shared = nil
       end
 
       protected
 
-        def load_definitions(path)
-          source = caller_locations(1, 1).first.path
-          path = File.expand_path(File.join(source, '..', path) << '.rb')
+        def load_definitions(path, from: nil)
+          from ||= File.join(caller_locations(1, 1).first.path, '..')
+          path = File.expand_path(File.join(from, path) << '.rb')
           module_eval(File.read(path), path, 1)
         end
 
@@ -32,29 +32,21 @@ module Torque
           @shared[property.to_sym] << block
         end
 
-        def define(name, with_content: true, compile: Elements.auto_compile_on_define, &block)
-          instance = @pending[name = name.to_sym] ||= HelperBuilder.new(name, with_content: with_content)
-
-          block.call(instance)
-          return unless compile
-
-          @pending.delete(name)
-          compile_content(instance.compile(@presets, @shared))
+        def define(helper, with_content: true, compile: Elements.auto_compile_on_define, &block)
+          block.call(@pending[helper = helper.to_sym] ||= HelperBuilder.new(helper, with_content: with_content))
         end
 
-        def associate(name, to:, compile: Elements.auto_compile_on_define, **extensions)
-          instance = @pending[name = name.to_sym] ||= AliasBuilder.new(name, to, **extensions)
-          return unless compile
-
-          @pending.delete(name)
-          compile_content(instance.compile)
+        def associate(helper, to:, compile: Elements.auto_compile_on_define, **extensions)
+          @pending[helper = helper.to_sym] ||= AliasBuilder.new(helper, to, **extensions)
         end
 
       private
 
-        def compile_content(content, path = nil)
-          args = [path, 1] if path
-          module_eval("# frozen_string_literal: true\n#{content}", *args)
+        def compile_content(content)
+          @file = Tempfile.new(["#{name.demodulize.underscore}_helpers", '.rb'])
+          @file.write(source = "# frozen_string_literal: true\n#{content}")
+          puts @file.path
+          module_eval(content, @file.path, 1)
         end
 
         def self.extended(base)

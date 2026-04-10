@@ -34,6 +34,10 @@ module Torque
         # The extensions to load for the admin theme. You can provide procs to ran under the context of the ui theme
         # class, or modules to be included in the class.
         theme_extensions: [],
+
+        # The modules to search for elements (lookup will happen in reverse order, so the last module will be searched
+        # first). By default, it is set to +Object+ and +Torque::Admin+.
+        elements_lookup_context: ['Object', 'Torque::Admin'],
       ).freeze
     end
   end

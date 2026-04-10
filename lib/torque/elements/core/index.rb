@@ -15,6 +15,10 @@ module Torque
           index.key?(node_id(key))
         end
 
+        def size
+          @index&.size || 0
+        end
+
         protected
 
           def node_id(value)
@@ -29,14 +33,20 @@ module Torque
 
           alias add_node index_node
 
+          def remove_node(node)
+            index.delete(node.id)
+          end
+
           def reindex(node, as)
-            node = self[node] unless node.is_a?(Core::Node)
+            node = self[node] unless node.is_a?(Node)
 
             index.delete(node.id)
             index[node.instance_variable_set(:@id, as)] = node
           end
 
-        private
+          def nodes_of_type(type)
+            index.each_value.select { |node| node.of_type?(type) }
+          end
 
           def index
             @index ||= {}

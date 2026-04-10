@@ -11,8 +11,8 @@ module Torque
         @instances = {}
       end
 
-      def fetch(name, *args, **kwargs, &block)
-        @instances[name] ||= _find(name).call(@controller, *args, **kwargs, &block)
+      def fetch(name, *args, **kwargs)
+        @instances[name] ||= _find(name).call(@controller, *args, **kwargs)
       end
 
       alias [] fetch
@@ -32,11 +32,12 @@ module Torque
       end
 
       def method_missing(name, *args, **kwargs, &block)
-        if name.end_with?('?')
-          respond_to?(name[0..-2])
-        else
-          fetch(name, *args, **kwargs, &block)
-        end
+        return respond_to?(name[0..-2]) if name.end_with?('?')
+
+        instance = fetch(name, *args, **kwargs)
+        # TODO: We should be able to customize the rendering when the block is provided
+        # otherwise, rendering the instance should go to +render_in+
+        block_given? ? yield(instance) : instance
       end
 
       def inspect

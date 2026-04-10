@@ -11,29 +11,25 @@ module Torque
           node = self[node] unless node.is_a?(Core::Node)
           return unless node
 
-          remove_node(node)
+          options[:insert_after] = options.delete(:after) if options[:after]
+          options[:insert_before] = options.delete(:before) if options[:before]
+
+          (node.parent || self).children.delete(node)
           add_on_position(node, options)
         end
 
-        def traverse(list = nodes, max_depth: @max_depth || Float::INFINITY, &block)
-          return if list.empty? || max_depth <= 0
-
-          list.map do |node|
-            if node.branch?
-              max_depth = node.skip_depth? ? max_depth : max_depth - 1
-              content = traverse(node.children, max_depth: max_depth, &block)
-            end
-
-            block.call(node, content)
-          end
+        def traverse(list = nodes, **options, &block)
+          Traverse.new(list, **@options.slice(:max_depth, :min_depth), **options).each(&block)
         end
 
+        # TODO: I can turn this into a debug/spec method
         def pretty_inspect(output = ''.dup, ident = 2, list = nodes.dup)
-          output << inspect << "\n"
+          counter = 0
+          output << '   |' << inspect << "\n"
           while (item = list.shift)
             next ident = item if item.is_a?(Integer)
 
-            output << (' ' * ident) << item.inspect << "\n"
+            output << sprintf('%3d|', counter += 1) << (' ' * ident) << item.inspect << "\n"
 
             unless item.leaf?
               list.unshift(*item.children.dup, ident)
@@ -47,46 +43,49 @@ module Torque
         protected
 
           def add_node(node)
-            add_on_position(node) || (@current&.children || nodes) << node
-            super(node)
-          end
-
-          def nodes_of_type(type)
-            nodes.select { |node| node.type == type }
+            add_on_position(node) || (@current || self).children << node
+            super
           end
 
           def remove_node(node)
-            (node.parent&.children || nodes).delete(node)
+            (node.parent || self).children.delete(node)
+            super
           end
 
           def add_on_position(node, options = node.options)
-            %i[after before prepend append prepend_to append_to].find do |key|
-              next unless options[key].is_a?(Symbol)
+            %i[insert_after insert_before prepend_to append_to].find do |key|
+              next unless [Node, Symbol, TrueClass, FalseClass].include?(options[key].class)
               next unless (ref = ref_to_node(options.delete(key)))
 
               break add_on_position!(node, ref, key)
             end
           end
 
+          def nodes
+            @nodes ||= []
+          end
+
+          alias children nodes
+
         private
 
           def ref_to_node(value)
-            [true, :root].include?(value) ? self : self[value]
+            return self if value == :root
+            return value if value.is_a?(Node)
+            return (@current || self) if value.eql?(true)
+
+            self[value]
           end
 
           def add_on_position!(node, ref, operation)
             case operation
-            when :prepend, :prepend_to then ref.children.unshift(node)
-            when :append, :append_to then ref.children.push(node)
-            when :before, :after
-              add = operation == :after ? 1 : 0
+            when :prepend_to then ref.children.unshift(node)
+            when :append_to then ref.children.push(node)
+            when :insert_before, :insert_after
+              add = operation == :insert_after ? 1 : 0
               parent = ref.parent&.children || nodes
               parent.insert(parent.index(ref) + add, node)
             end
-          end
-
-          def nodes
-            @nodes ||= []
           end
       end
     end

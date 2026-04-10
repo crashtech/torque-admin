@@ -17,10 +17,6 @@ module Torque
           klass
         end
       end
-
-      initializer 'torque_admin.clear_application_on_reload' do
-        ActiveSupport::Reloader.to_prepare { admin_application.clear }
-      end
     end
   end
 end

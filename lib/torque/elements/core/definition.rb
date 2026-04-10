@@ -8,23 +8,27 @@ module Torque
         extend ActiveSupport::Concern
 
         attr_reader :name, :options
-        alias definition_arg itself
 
         def initialize(name, controller, definition, *args, **options)
           @name = name
           @controller = controller
+          @definition = definition
           @options = args.grep(Symbol).product([true]).to_h.merge(options)
 
           super()
-          define(&definition)
         end
 
         def define(&block)
           @current = nil
           @definer = SimpleDelegator.new(self)
 
-          args = block.arity == 1 ? definition_arg : nil
-          @definer.instance_exec(*args, &block)
+          if block.arity == 1
+            block.call(@definer)
+          else
+            @definer.instance_exec(&block)
+          end
+
+          self
         ensure
           remove_instance_variable(:@current)
           remove_instance_variable(:@definer)
@@ -38,11 +42,10 @@ module Torque
           other = @controller.elements[other] unless other.is_a?(Base)
           raise ArgumentError, "Expected an element definition, got #{other.class.name}" unless other.is_a?(Base)
 
-          other.traverse do |node, *|
+          append_to = @current&.children || nodes
+          other.traverse do |node|
             index_node(node)
-            next if node.parent
-
-            (@current&.children || nodes) << node
+            append_to << node unless node.parent
           end
         end
 
@@ -53,8 +56,10 @@ module Torque
         protected
 
           def add_node(id, type, skip_depth: false, **options, &block)
-            super(node = Node.new(node_id(id), type, options, parent: @current, skip_depth: skip_depth))
-            nest_content(node, &block) if block_given?
+            Node.new(node_id(id), type, @current, skip_depth, **options).tap do |node|
+              super(node)
+              nest_content(node, &block) if block_given?
+            end
           end
 
           def nest_content(node, &block)

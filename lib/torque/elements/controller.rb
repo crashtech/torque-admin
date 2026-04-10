@@ -15,7 +15,10 @@ module Torque
 
         def element(name, as:, **options, &definition)
           raise ArgumentError, +'A definition block must be provided' unless block_given?
-          raise ArgumentError, "Element of type #{as} does not exist" unless (klass = Elements.type_for(as))
+
+          klass = as.is_a?(Class) ? as : element_constructor_for(as)
+          valid = klass.is_a?(Class) && klass <= Torque::Elements::Base
+          raise ArgumentError, "#{as} is not a valid element reference" unless valid
 
           name = name.underscore.to_sym if name.is_a?(::String)
 
@@ -29,6 +32,13 @@ module Torque
         def change_element(name, **options)
           name = name.underscore.to_sym if name.is_a?(::String)
           inherited_element_settings(name).merge!(options)
+        end
+
+        def element_constructor_for(name)
+          name = name.to_s unless name.is_a?(::String)
+          name = name.camelize
+          name += 'Element' unless name.end_with?('Element')
+          name.safe_constantize
         end
 
         private

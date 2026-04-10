@@ -42,7 +42,7 @@ module Torque
         @ui_builder = nil
         @base_controller = nil
         LazyModules::MODULES.each_key do |mod_name|
-          mod.remove_const(mod_name) if mod.const_defined?(mod_name)
+          mod.send(:remove_const, mod_name) if mod.constants.include?(mod_name)
         end
       end
 
@@ -54,10 +54,12 @@ module Torque
 
         def setup_additional_config
           @config.title ||= @name.to_s.titleize
+          @config.elements_lookup_context << mod.name
+          ActiveSupport::Reloader.to_prepare(&method(:clear))
         end
 
         def ui_theme
-          @ui_theme ||= ["#{name}/#{config.theme!}", config.theme.to_s.classify.sub(/Ui$/, 'UI')]
+          @ui_theme ||= ["#{config.theme!}/#{name}", config.theme.to_s.classify.sub(/Ui$/, 'UI')]
         end
 
         def setup_application_module
