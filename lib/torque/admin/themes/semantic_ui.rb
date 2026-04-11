@@ -28,39 +28,37 @@ module Torque
           menu_header(content, **kwargs)
         end
 
-        def application_main_menu(*args, **kwargs)
-          element = elements.fetch(:main_menu, *args, **kwargs)
-          element.render_in(self) do |node_type, content, *, **kwargs|
-            next submenu(content, **kwargs) if node_type == :submenu
-
-            if node_type == :menu
-              if element.is?(:vertical)
-                kwargs[:class] = [kwargs[:class], 'left']
-                kwargs[:style] = [kwargs[:style], { margin: 0, border_radius: 0 }]
-              end
-
-              next menu(content, **kwargs)
+        def app_main_menu(node, content, **kwargs)
+          if node =~ :root
+            if kwargs[:vertical]
+              kwargs[:class] = [kwargs[:class], 'left']
+              kwargs[:style] = [kwargs[:style], { margin: 0, border_radius: 0 }]
             end
 
-            label = kwargs.delete(:label)
-            menu_link_options(kwargs) if kwargs[:href].present?
-            next public_send("menu_#{node_type}", label, **kwargs) if content.blank?
-
-            kwargs[:after] = [*kwargs[:after], content]
-            kwargs[:class] = [kwargs[:class], { header: false }]
-            kwargs[:dropdown] = true
-
-            next menu_header(label, **kwargs) if node_type == :header
-
-            options = kwargs.extract!(:after, :dropdown, :prepend, :append)
-            menu_item(menu_item(label, **kwargs), **options)
+            return menu(content, **kwargs)
           end
+
+          menu_link_options(kwargs)
+          label = kwargs.delete(:label)
+          helper = kwargs[:href].present? ? :menu_item : :menu_header
+          return public_send(helper, label, **kwargs) if content.nil?
+
+          kwargs[:after] = [*kwargs[:after], submenu(content, **(kwargs.delete(:submenu) || {}))]
+          kwargs[:class] = [kwargs[:class], { header: false }]
+          kwargs[:dropdown] = true
+
+          return menu_header(label, **kwargs) if helper == :menu_header
+
+          options = kwargs.extract!(:after, :dropdown, :prepend, :append)
+          menu_item(menu_item(label, **kwargs), **options)
         end
 
         private
 
           def menu_link_options(options)
-            options[:href] = url_for(options[:href]) if options[:href].present?
+            return unless options[:href].present?
+
+            options[:href] = url_for(options[:href])
             options[:class] = [options[:class], { active: view_context.current_page?(options[:href]) }]
           end
 

@@ -35,6 +35,10 @@ module Torque
       ensure
         @output_buffer, @virtual_path, @current_template = _old_output_buffer, _old_virtual_path, _old_template
       end
+
+      def elements
+        @elements ||= Registry.new(self)
+      end
     end
   end
 end

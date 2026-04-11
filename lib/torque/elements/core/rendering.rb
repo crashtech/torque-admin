@@ -3,39 +3,52 @@
 module Torque
   module Elements
     module Core
-      # = Torque Elements \Core Renderer
-      module Renderer
+      # = Torque Elements \Core Rendering
+      module Rendering
         extend ActiveSupport::Concern
 
-        TEXT_ATTRIBUTES = (%i[alt label placeholder title] + %w[alt label placeholder title]).freeze
-
         def initialize
-          @settings = @options.extract!(:helper_method, :max_depth, :min_depth)
+          @rendered = false
+          @settings = @root.options.extract!(:helper_method, :max_depth, :min_depth)
         end
 
         def helper_method
           @settings.fetch(:helper_method) { @controller.element_helper_name(name) }
         end
 
+        def rendered?
+          @rendered
+        end
+
+        def resolve_text_for(node, option)
+          node = self[node] unless node.is_a?(Node)
+
+          current = node.options[option]
+          return current if static_text?(current)
+
+          node.options[option] = text_for(node.id, node.type, option, fallback: current)
+        end
+
+        def sanitize_node_options(node)
+          node.options.extract!(*text_attributes).each do |key, value|
+            value = text_for(node.id, node.type, key, fallback: value)
+            node.options[key] = value unless value.nil?
+          end
+        end
+
+        def to_s
+          render_in(@controller.view_context)
+        end
+
+        def render_in(context, &block)
+          @controller.with_elements_context(self, context) do
+            Renderer.new(self).render(&block)
+          end
+        ensure
+          @rendered = true
+        end
+
         protected
-
-          def extract_arguments(type, options)
-            # By default, no arguments are extracted
-          end
-
-          def sanitize_options(id, type, options)
-            options.extract!(*TEXT_ATTRIBUTES).each do |key, value|
-              value = text_for(id, type, key, fallback: value)
-              options[key] = value unless value.nil?
-            end
-          end
-
-          def sanitize_text_for(node, option)
-            current = node.options[option]
-            return current if static_text?(current)
-
-            node.options[option] = text_for(node.id, node.type, option, fallback: current)
-          end
 
           def text_for(value, type, subpart = nil, fallback: nil)
             return fallback if static_text?(fallback)
@@ -57,6 +70,10 @@ module Torque
 
           def i18n_keys
             @i18n_keys ||= @controller.elements_i18n_keys_for(self)
+          end
+
+          def text_attributes
+            %i[alt label placeholder title]
           end
 
         private

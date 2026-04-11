@@ -14,7 +14,7 @@ module Torque
 
       class << self
         def new(context, framework: nil)
-          return super if self != UiBuilder
+          return super(context) if self != UiBuilder
 
           raise MissingFrameworkError, <<~MSG.squish unless (klass = framework_classes[normalize_name(framework)])
             No UI framework named '#{framework}'.

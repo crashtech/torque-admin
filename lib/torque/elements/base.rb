@@ -3,7 +3,7 @@
 require_relative 'core/definition'
 require_relative 'core/index'
 require_relative 'core/nodes'
-require_relative 'core/renderer'
+require_relative 'core/rendering'
 
 module Torque
   module Elements
@@ -17,7 +17,7 @@ module Torque
 
       include Core::Index
       include Core::Nodes
-      include Core::Renderer
+      include Core::Rendering
 
       include Core::Definition
 

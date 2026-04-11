@@ -35,6 +35,8 @@ module Torque
         type == value.to_sym
       end
 
+      alias =~ of_type?
+
       def skip_depth?
         @skip_depth
       end

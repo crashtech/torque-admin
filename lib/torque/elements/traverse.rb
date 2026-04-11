@@ -40,7 +40,7 @@ module Torque
           @content.last << yield(item, content) if depth >= @min_depth
         end
 
-        yield(nil, @content.pop)
+        @content.pop
       end
 
       private

@@ -15,6 +15,8 @@ module Torque
           index.key?(node_id(key))
         end
 
+        alias has? key?
+
         def size
           @index&.size || 0
         end
@@ -45,7 +47,7 @@ module Torque
           end
 
           def nodes_of_type(type)
-            index.each_value.select { |node| node.of_type?(type) }
+            index.each_value.select { |node| node =~ type }
           end
 
           def index

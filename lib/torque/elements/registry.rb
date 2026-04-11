@@ -6,9 +6,22 @@ module Torque
 
     # = Torque Elements \Registry
     class Registry < BasicObject
-      def initialize(controller)
-        @controller = controller
+      def initialize(context)
+        @context = context
+        @controller = context.controller
         @instances = {}
+      end
+
+      def new(type, name = nil, **options, &block)
+        klass = type.is_a?(::Class) ? as : @controller.element_constructor_for(type)
+        valid = klass.is_a?(::Class) && klass <= ::Torque::Elements::Base
+        ::Kernel.raise ::ArgumentError, "#{type} is not a valid element reference" unless valid
+
+        instance = klass.new(name, @controller, **options)
+        return instance.render_in(@context, &block) if block.present?
+
+        ::Kernel.raise ::ArgumentError, +'Expected a block for inlined element' if name.nil?
+        @instances[name] ||= instance
       end
 
       def fetch(name, *args, **kwargs)
@@ -35,9 +48,7 @@ module Torque
         return respond_to?(name[0..-2]) if name.end_with?('?')
 
         instance = fetch(name, *args, **kwargs)
-        # TODO: We should be able to customize the rendering when the block is provided
-        # otherwise, rendering the instance should go to +render_in+
-        block_given? ? yield(instance) : instance
+        block_given? ? instance.render_in(@controller.view_context, &block) : instance
       end
 
       def inspect

@@ -47,7 +47,7 @@ module Torque
         ## Quick Elements Definers
 
         def main_menu(**kwargs, &block)
-          element(:main_menu, as: :menu, **kwargs, &block)
+          element(:main_menu, of_type: :menu, **kwargs, &block)
         end
       end
 

@@ -30,10 +30,6 @@ module Torque
       def app_controller_class_name
         controller.admin_controller_name(namespace: '--').concat('-controller').dasherize
       end
-
-      def app_main_menu(*args, **kwargs)
-        ui.application_main_menu(*args, **kwargs)
-      end
     end
   end
 end

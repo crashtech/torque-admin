@@ -32,11 +32,11 @@ module Torque
           @shared[property.to_sym] << block
         end
 
-        def define(helper, with_content: true, compile: Elements.auto_compile_on_define, &block)
+        def define(helper, with_content: true, &block)
           block.call(@pending[helper = helper.to_sym] ||= HelperBuilder.new(helper, with_content: with_content))
         end
 
-        def associate(helper, to:, compile: Elements.auto_compile_on_define, **extensions)
+        def associate(helper, to:, **extensions)
           @pending[helper = helper.to_sym] ||= AliasBuilder.new(helper, to, **extensions)
         end
 
@@ -45,7 +45,6 @@ module Torque
         def compile_content(content)
           @file = Tempfile.new(["#{name.demodulize.underscore}_helpers", '.rb'])
           @file.write(source = "# frozen_string_literal: true\n#{content}")
-          puts @file.path
           module_eval(content, @file.path, 1)
         end
 

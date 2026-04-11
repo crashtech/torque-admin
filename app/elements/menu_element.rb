@@ -9,7 +9,7 @@ module Torque
         super(*args, **options, &block)
       end
 
-      ## Define elements
+      ## Define nodes
 
       def item(identifier, href_or_label = nil, href = nil, **options, &block)
         reindex(identifier, node_id("#{identifier}-container")) if key?(identifier) && !key?("#{identifier}-container")
@@ -37,11 +37,11 @@ module Torque
       end
 
       def apply_sorting!(mode = @sort)
-        sortable_lists(mode).each { |list| list.sort_by! { |node| label_for(node) } }
+        sortable_lists(mode).each { |list| list.sort_by!(&method(:label_for)) }
       end
 
       def label_for(node)
-        sanitize_text_for(node.is_a?(Elements::Node) ? node : self[node], :label)
+        resolve_text_for(node, :label)
       end
 
       protected

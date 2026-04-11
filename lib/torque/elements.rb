@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'active_support/concern'
+require 'active_support/current_attributes'
 require 'active_support/dependencies/autoload'
 
 module Torque
@@ -14,8 +15,9 @@ module Torque
 
     autoload :Base
     autoload :Node
-    autoload :Traverse
     autoload :Registry
+    autoload :Renderer
+    autoload :Traverse
 
     autoload :Helpers
     autoload :UiBuilder
@@ -35,8 +37,10 @@ module Torque
       autoload :HelperBuilder
     end
 
-    ## Settings
-    mattr_accessor :auto_compile_on_define, default: false
+    ## Context for when an element is being rendered
+    class RenderingContext < ActiveSupport::CurrentAttributes
+      attribute :element, :view_context
+    end
 
     class << self
       def logger

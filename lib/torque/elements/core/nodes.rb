@@ -19,7 +19,7 @@ module Torque
         end
 
         def traverse(list = nodes, **options, &block)
-          Traverse.new(list, **@options.slice(:max_depth, :min_depth), **options).each(&block)
+          Traverse.new(list, **@settings.slice(:max_depth, :min_depth), **options).each(&block)
         end
 
         # TODO: I can turn this into a debug/spec method
@@ -42,6 +42,9 @@ module Torque
 
         protected
 
+          delegate :children, to: :@root
+          alias nodes children
+
           def add_node(node)
             add_on_position(node) || (@current || self).children << node
             super
@@ -61,18 +64,12 @@ module Torque
             end
           end
 
-          def nodes
-            @nodes ||= []
-          end
-
-          alias children nodes
-
         private
 
           def ref_to_node(value)
             return self if value == :root
             return value if value.is_a?(Node)
-            return (@current || self) if value.eql?(true)
+            return @current || self if value.eql?(true)
 
             self[value]
           end

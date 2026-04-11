@@ -7,19 +7,21 @@ module Torque
       module Definition
         extend ActiveSupport::Concern
 
-        attr_reader :name, :options
+        attr_reader :name, :options, :root
 
-        def initialize(name, controller, definition, *args, **options)
+        def initialize(name, controller, *args, **options, &definition)
           @name = name
           @controller = controller
           @definition = definition
-          @options = args.grep(Symbol).product([true]).to_h.merge(options)
+
+          options = args.grep(Symbol).product([true]).to_h.merge(options)
+          @root = Node.new(node_id(name), :root, nil, true, **options)
 
           super()
         end
 
         def define(&block)
-          @current = nil
+          @current = @root
           @definer = SimpleDelegator.new(self)
 
           if block.arity == 1
@@ -30,8 +32,14 @@ module Torque
 
           self
         ensure
-          remove_instance_variable(:@current)
-          remove_instance_variable(:@definer)
+          @current = @definer = nil
+        end
+
+        def define!
+          return unless @definition
+
+          define(&@definition)
+          @definition = nil
         end
 
         def element_type
@@ -49,14 +57,10 @@ module Torque
           end
         end
 
-        def is?(option)
-          @options[option.to_sym].eql?(true)
-        end
-
         protected
 
           def add_node(id, type, skip_depth: false, **options, &block)
-            Node.new(node_id(id), type, @current, skip_depth, **options).tap do |node|
+            Node.new(node_id(id), type, @current || @root, skip_depth, **options).tap do |node|
               super(node)
               nest_content(node, &block) if block_given?
             end
