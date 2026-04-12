@@ -129,7 +129,7 @@ module Torque
             #{operations.join("\n")}
 
             tag_name = _properties.fetch(:as, '#{@with_content ? 'div' : 'span'}')
-            render_tag(tag_name, combine_options(options, _options), with_content: #{@with_content.present?.inspect})
+            render_tag(tag_name, combine_options(_options, options), with_content: #{@with_content.present?.inspect})
           end
         RUBY
       end

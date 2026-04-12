@@ -7,6 +7,10 @@ module Torque
       module Nodes
         extend ActiveSupport::Concern
 
+        def traverse(list = nodes, **options, &block)
+          Traverse.new(list, **@settings.slice(:max_depth, :min_depth), **options).each(&block)
+        end
+
         def move(node, **options)
           node = self[node] unless node.is_a?(Core::Node)
           return unless node
@@ -16,28 +20,6 @@ module Torque
 
           (node.parent || self).children.delete(node)
           add_on_position(node, options)
-        end
-
-        def traverse(list = nodes, **options, &block)
-          Traverse.new(list, **@settings.slice(:max_depth, :min_depth), **options).each(&block)
-        end
-
-        # TODO: I can turn this into a debug/spec method
-        def pretty_inspect(output = ''.dup, ident = 2, list = nodes.dup)
-          counter = 0
-          output << '   |' << inspect << "\n"
-          while (item = list.shift)
-            next ident = item if item.is_a?(Integer)
-
-            output << sprintf('%3d|', counter += 1) << (' ' * ident) << item.inspect << "\n"
-
-            unless item.leaf?
-              list.unshift(*item.children.dup, ident)
-              ident += 2
-            end
-          end
-
-          output
         end
 
         protected

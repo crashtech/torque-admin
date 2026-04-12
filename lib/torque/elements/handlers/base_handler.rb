@@ -4,6 +4,10 @@ module Torque
   module Elements
     # = Torque Elements \Base Handler
     class BaseHandler
+      LOWER_CAMEL_CASE = ->(value) { ActiveSupport::Inflector.camelize(value, false) }
+
+      delegate :view_context, to: '::Torque::Elements::Context'
+
       def combine(_, value)
         value
       end
@@ -15,8 +19,7 @@ module Torque
       protected
 
         def list_combine(current, value)
-          value = [value] if value.is_a?(Hash)
-          [*current, *value]
+          [*current, *(value.is_a?(Hash) ? [value] : value)]
         end
 
         def format(value)
@@ -28,8 +31,7 @@ module Torque
         def formatter
           @formatter ||= @format.respond_to?(:call) ? @format : begin
             case @format
-            when :lower_camelize, :lower_camel_case
-              proc { |value| ActiveSupport::Inflector.camelize(value, false) }
+            when :lower_camelize, :lower_camel_case then LOWER_CAMEL_CASE
             when :dash then ActiveSupport::Inflector.method(:dasherize)
             when :camel_case then ActiveSupport::Inflector.method(:camelize)
             else ActiveSupport::Inflector.method(@format)

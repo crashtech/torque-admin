@@ -15,10 +15,6 @@ module Torque
         @skip_depth = skip_depth
       end
 
-      def memo
-        @memo ||= {}
-      end
-
       def children
         @children ||= []
       end

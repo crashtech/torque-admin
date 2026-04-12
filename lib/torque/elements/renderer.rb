@@ -5,6 +5,7 @@ module Torque
     # = Torque Elements \Renderer
     class Renderer
       delegate :sanitize_node_options, :element_type, :key?, :has?, to: :@element
+      delegate :view_context, to: '::Torque::Elements::Context'
 
       Renderable = Class.new(SimpleDelegator) do
         delegate :html_safe, :to_str, to: :to_s
@@ -23,40 +24,39 @@ module Torque
         end
       end
 
+      def self.render(element, inline: false, &block)
+        instance = new(element)
+        unless block_given?
+          element.config!
+          return instance.render_node(element.root)
+        end
+
+        instance.send(:enable_new_nodes, inline ? element : nil)
+        instance.nest_content(&block)
+      end
+
       def initialize(element)
         @element = element
         @rendered = {}
       end
 
-      def render(&block)
-        unless block_given?
-          @element.define!
-          return render_node(@element.root)
-        end
+      def content_of(node, outer: false)
+        node = node.is_a?(Node) ? node : @element.config![key]
+        outer ? render_node(node) : render_content(node)
+      end
 
-        @new_nodes = @element.class.new(
-          @element.name,
-          view_context.controller,
-          **@element.options,
-        )
-
-        content = view_context.capture { block.call(self) }
-        invoke_renderer(@new_nodes.root, content)
+      def render_content(node = @element.root)
+        traverse_for(node) { |node, content| invoke_renderer(node, content) }
       end
 
       def render_node(node, **options)
-        node_content = traverse_for(node) do |node, content|
-          invoke_renderer(node, content)
-        end
-
-        invoke_renderer(node, node_content, **options)
+        invoke_renderer(node, render_content(node), **options)
       end
 
       ## Accessing and/or defining nodes
 
       def [](key)
-        @element.define!
-        node = @element[key]
+        node = @element.config![key]
         Renderable.new(node, self) if node
       end
 
@@ -74,6 +74,14 @@ module Torque
       end
 
       private
+
+        def enable_new_nodes(instance = nil)
+          @new_nodes = instance || @element.class.new(
+            @element.name,
+            view_context.controller,
+            **@element.root.options,
+          )
+        end
 
         def possibly_new_node(method_name, *args, **kwargs, &block)
           return @new_nodes.public_send(method_name, *args, **kwargs) unless block_given?
@@ -119,10 +127,6 @@ module Torque
           return unless view_context.ui.respond_to?(:visitors_for)
 
           [view_context.ui, :visitors_for, @element]
-        end
-
-        def view_context
-          RenderingContext.view_context
         end
     end
   end

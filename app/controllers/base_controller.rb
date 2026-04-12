@@ -34,7 +34,7 @@ module Torque
           name.gsub(/\A(?:#{"#{admin_application.mod.name}::"})?(.*)Controller\z/, '\1').underscore.tr('/', namespace)
         end
 
-        def element_constructor_for(name)
+        def element_class_name(name)
           name = name.to_s unless name.is_a?(::String)
           name = name.camelize
           name += 'Element' unless name.end_with?('Element')

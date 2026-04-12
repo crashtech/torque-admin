@@ -8,6 +8,7 @@ module Torque
 
       attr_reader :stack, :current, :depth
 
+      # TODO: Use a simple index as part of the stack, instead of converting to an enumerator
       def initialize(list, max_depth: nil, min_depth: nil)
         @stack = [[list.to_enum, 1]]
         @max_depth = max_depth || Float::INFINITY

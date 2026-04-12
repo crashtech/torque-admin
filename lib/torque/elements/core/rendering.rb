@@ -8,16 +8,12 @@ module Torque
         extend ActiveSupport::Concern
 
         def initialize
-          @rendered = false
           @settings = @root.options.extract!(:helper_method, :max_depth, :min_depth)
+          super
         end
 
         def helper_method
           @settings.fetch(:helper_method) { @controller.element_helper_name(name) }
-        end
-
-        def rendered?
-          @rendered
         end
 
         def resolve_text_for(node, option)
@@ -37,15 +33,21 @@ module Torque
         end
 
         def to_s
-          render_in(@controller.view_context)
+          render_in(Context.view_context)
         end
 
-        def render_in(context, &block)
-          @controller.with_elements_context(self, context) do
-            Renderer.new(self).render(&block)
-          end
+        def render_in(context, inline: false, &block)
+          raise "Element #{name} has already been rendered" if rendered?
+
+          @state << 'rendering'
+          Renderer.render(self, inline: inline, &block)
         ensure
-          @rendered = true
+          @state << 'rendered'
+        end
+
+        def clear!
+          @settings = nil
+          super
         end
 
         protected

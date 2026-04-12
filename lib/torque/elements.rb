@@ -19,6 +19,7 @@ module Torque
     autoload :Renderer
     autoload :Traverse
 
+    autoload :Context
     autoload :Helpers
     autoload :UiBuilder
     autoload :HelperConstructor
@@ -26,8 +27,8 @@ module Torque
     autoload_under :handlers do
       autoload :BaseHandler
       autoload :ContentHandler
+      autoload :FormatHandler
       autoload :ListHandler
-      autoload :NameHandler
       autoload :MapHandler
       autoload :RefHandler
     end
@@ -37,18 +38,15 @@ module Torque
       autoload :HelperBuilder
     end
 
-    ## Context for when an element is being rendered
-    class RenderingContext < ActiveSupport::CurrentAttributes
-      attribute :element, :view_context
-    end
-
     class << self
       def logger
         ActionView::Base.logger
       end
 
       def attribute_name(name)
-        name.to_s.underscore.dasherize
+        return name if name.is_a?(::String) && name.frozen?
+
+        name.to_s.underscore.dasherize.freeze
       end
 
       def define_attribute(name, handler)
@@ -59,12 +57,12 @@ module Torque
         if name.is_a?(Regexp)
           attributes[:dynamic][name] = handler
         else
-          attributes[:static][attribute_name(name).freeze] = handler
+          attributes[:static][attribute_name(name)] = handler
         end
       end
 
       def find_attribute(name)
-        attributes[:static].compute_if_absent((name = attribute_name(name)).freeze) do
+        attributes[:static].compute_if_absent(name = attribute_name(name)) do
           key = attributes[:dynamic].each_key.find { |pattern| pattern =~ name }
           attributes[:dynamic].fetch(key, default_attribute)
         end

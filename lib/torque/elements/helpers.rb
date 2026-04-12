@@ -26,6 +26,14 @@ module Torque
       include PrecompileHelper
       include UiHelper
 
+      module HookContext
+        def in_rendering_context(*)
+          Context.initialized? ? super : with_elements_context { super }
+        end
+      end
+
+      delegate :elements, to: '::Torque::Elements::Context'
+
       def _run_under(buffer, template)
         _old_output_buffer, _old_virtual_path, _old_template = @output_buffer, @virtual_path, @current_template
         @current_template = template
@@ -36,9 +44,18 @@ module Torque
         @output_buffer, @virtual_path, @current_template = _old_output_buffer, _old_virtual_path, _old_template
       end
 
-      def elements
-        @elements ||= Registry.new(self)
-      end
+      private
+
+        def with_elements_context(**extra)
+          extra[:view_context] = self
+          extra[:elements] = Registry.new(self)
+
+          Context.with(**extra) do
+            yield
+          ensure
+            Context.reset
+          end
+        end
     end
   end
 end

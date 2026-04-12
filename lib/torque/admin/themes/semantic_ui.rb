@@ -19,23 +19,26 @@ module Torque
         end
 
         def body(preset, **kwargs, &content)
-          options = build_options(fetch_presets(:default, preset, from: :body) << kwargs)
-          combine_option('class', options, [preset, app_body_classes])
+          defaults = { class: [preset, app_body_classes] }
+          options = build_options(fetch_presets(:default, preset, from: :body), defaults, kwargs)
           render_content_tag(:body, nil, options, &content)
         end
 
         def application_banner(content, **kwargs)
-          menu_header(content, **kwargs)
+          # url_for(:root)
+          menu_item(content, '#', **kwargs)
+        end
+
+        def logo(src, **kwargs)
+          defaults = { src: src, class: 'logo', width: 35, style: { margin_right: '2ex' } }
+          render_tag(:img, build_options(defaults, kwargs))
         end
 
         def app_main_menu(node, content, **kwargs)
           if node =~ :root
-            if kwargs[:vertical]
-              kwargs[:class] = [kwargs[:class], 'left']
-              kwargs[:style] = [kwargs[:style], { margin: 0, border_radius: 0 }]
-            end
-
-            return menu(content, **kwargs)
+            kwargs[:class] = [kwargs[:class], 'left'] if kwargs[:vertical]
+            kwargs[:style] = [kwargs[:style], { margin: 0, border_radius: 0 }]
+            return menu(content, inverted: true, **kwargs)
           end
 
           menu_link_options(kwargs)

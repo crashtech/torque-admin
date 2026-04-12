@@ -4,15 +4,24 @@ module Torque
   module Admin
     # = Torque Admin \Menu Element
     class MenuElement < Elements::Base
-      def initialize(*args, sort: nil, **options, &block)
+      def initialize(*args, sort: nil, icons: nil, **options, &block)
         @sort = sort
+        @icons = icons
         super(*args, **options, &block)
+      end
+
+      def validate!
+        raise ArgumentError, "Invalid sort option: #{@sort}" if @sort && !%i[root children all].include?(@sort)
+        raise ArgumentError, "Invalid icons option: #{@icons}" if @icons && !@icons.is_a?(Hash)
+        super
       end
 
       ## Define nodes
 
       def item(identifier, href_or_label = nil, href = nil, **options, &block)
         reindex(identifier, node_id("#{identifier}-container")) if key?(identifier) && !key?("#{identifier}-container")
+
+        options[:icon] ||= @icons[identifier] if @icons
 
         href, href_or_label = href_or_label, nil if href.nil?
         add_node(identifier, :item, label: href_or_label || identifier, href: href, **options, &block)

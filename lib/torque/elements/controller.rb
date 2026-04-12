@@ -7,26 +7,23 @@ module Torque
       extend ActiveSupport::Concern
 
       included do
-        helper_method :element_helper_name, :element_constructor_for, :elements_i18n_keys_for
-        delegate :element_constructor_for, to: :class
+        helper_method :element_helper_name, :element_class_for, :element_class_name, :change_element, :elements_i18n_keys_for
+        delegate :element_class_name, :element_class_for, :change_element, to: :class
       end
 
       class_methods do
         attr_reader :elements
 
-        def element(name, of_type:, **options, &definition)
-          raise ArgumentError, +'A definition block must be provided' unless block_given?
+        def element(name, of_type:, **options, &config)
+          raise ArgumentError, +'A config block must be provided' unless block_given?
 
-          klass = of_type.is_a?(Class) ? of_type : element_constructor_for(of_type)
-          valid = klass.is_a?(Class) && klass <= Torque::Elements::Base
-          raise ArgumentError, "#{of_type} is not a valid element reference" unless valid
-
+          klass = element_class_for(of_type)
           name = name.underscore.to_sym if name.is_a?(::String)
 
           change_element(name, **options)
           (@elements ||= {})[name] = lambda do |controller, *args, **kwargs|
             kwargs = inherited_element_settings(name).merge(kwargs)
-            klass.new(name, controller, *args, **kwargs, &definition)
+            klass.new(name, controller, *args, **kwargs, &config)
           end
         end
 
@@ -35,7 +32,14 @@ module Torque
           element_settings[name] = inherited_element_settings(name).merge!(options)
         end
 
-        def element_constructor_for(name)
+        def element_class_for(type)
+          klass = type.is_a?(Class) ? type : element_class_name(type)
+          return klass if klass.is_a?(Class) && klass <= Torque::Elements::Base
+
+          raise ArgumentError, "#{type} is not a valid element reference"
+        end
+
+        def element_class_name(name)
           name = name.to_s unless name.is_a?(::String)
           name = name.camelize
           name += 'Element' unless name.end_with?('Element')
@@ -65,10 +69,6 @@ module Torque
 
       def elements_i18n_keys_for(*)
         ['%<name>s.%<type>s.%<id>s', '%<name>s.%<id>s']
-      end
-
-      def with_elements_context(element, render_context = view_context, **extra, &block)
-        RenderingContext.with(element: element, view_context: render_context, **extra, &block)
       end
     end
   end

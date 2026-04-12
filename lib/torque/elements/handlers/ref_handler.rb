@@ -7,14 +7,19 @@ module Torque
       def initialize(format: :underscore, separator: '_')
         @separator = separator
         @format = format
-        super()
       end
 
       def collapse(value)
-        value = format(transliterate(value.to_s))
+        return if value.nil?
+
+        value = format(deref(value))
         return value unless @separator
 
         value.tr('/', @separator).tr(':', '')
+      end
+
+      def deref(value)
+        (value.is_a?(Symbol) && Context.refs[value]) || value.to_s
       end
     end
   end

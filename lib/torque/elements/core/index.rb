@@ -7,6 +7,12 @@ module Torque
       module Index
         extend ActiveSupport::Concern
 
+        attr_reader :index
+
+        def initialize
+          @index = { root: @root }
+        end
+
         def [](key)
           index[node_id(key)]
         end
@@ -18,12 +24,18 @@ module Torque
         alias has? key?
 
         def size
-          @index&.size || 0
+          index.size - 1
+        end
+
+        def clear!
+          @index = nil
         end
 
         protected
 
           def node_id(value)
+            return value if value == :root || (value.is_a?(String) && value.frozen?)
+
             value.to_s.downcase.gsub(/[_\s]/, '-').gsub(/[^-a-z0-9]/, '')
           end
 
@@ -48,10 +60,6 @@ module Torque
 
           def nodes_of_type(type)
             index.each_value.select { |node| node =~ type }
-          end
-
-          def index
-            @index ||= {}
           end
       end
     end

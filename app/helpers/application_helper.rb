@@ -5,6 +5,11 @@ module Torque
     module ApplicationHelper
       delegate :admin_application, to: :controller
 
+      def app_logo(src = nil)
+        src ||= "data:image/svg+xml;base64,#{Base64.strict_encode64(APP_DIR.join('assets/images/logo.svg').read)}"
+        ui.logo(src, alt: app_plain_title)
+      end
+
       def app_plain_title
         admin_application.config.title || 'Torque Admin'
       end
@@ -15,7 +20,7 @@ module Torque
       end
 
       def app_banner(title = app_plain_title, **kwgargs)
-        ui.application_banner(title, **kwgargs)
+        ui.application_banner(app_logo + title, **kwgargs)
       end
 
       def app_body_classes

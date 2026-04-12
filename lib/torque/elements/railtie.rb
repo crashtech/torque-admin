@@ -18,9 +18,9 @@ module Torque
       initializer 'torque-elements.default_attributes' do
         Elements.define_attribute('@content', ContentHandler.new)
 
-        Elements.define_attribute('style', MapHandler.new(separator: ';', format: :dasherize, style: true))
+        Elements.define_attribute('style', MapHandler.new(separator: ';', format: :dasherize, as_json: false))
         Elements.define_attribute('class', ListHandler.new)
-        Elements.define_attribute('name', NameHandler.new)
+        Elements.define_attribute('name', FormatHandler.new('[%s]', include_first: false))
 
         if defined?(Stimulus::Engine)
           Elements.define_attribute('data-controller', ListHandler.new(nested_separator: '--'))
@@ -41,6 +41,8 @@ module Torque
 
           ActionView::AbstractRenderer.prepend(Templates::AbstractRenderer)
           ActionView::LookupContext.prepend(Templates::LookupContext)
+
+          ActionView::Base.prepend(Helpers::HookContext)
         end
       end
 

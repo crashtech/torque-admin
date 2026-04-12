@@ -7,43 +7,73 @@ module Torque
       module Definition
         extend ActiveSupport::Concern
 
-        attr_reader :name, :options, :root
+        attr_reader :name, :options, :state, :root
 
-        def initialize(name, controller, *args, **options, &definition)
+        delegate :id, to: :root
+        delegate :initiated?, :configured?, :rendering?, :rendered?, to: :state
+
+        def initialize(name, controller, *args, **options, &config)
           @name = name
+          @state = [].inquiry
           @controller = controller
-          @definition = definition
+          @config = config
 
           options = args.grep(Symbol).product([true]).to_h.merge(options)
           @root = Node.new(node_id(name), :root, nil, true, **options)
 
           super()
+          validate!
+
+          @state << 'initiated'
         end
 
-        def define(&block)
+        def change(identifier, **options)
+          self[identifier]&.options&.merge!(options)
+        end
+
+        def validate!
+          # Override in subclasses to perform validation after the definition
+        end
+
+        def config!
+          return self if configured?
+
+          config(&@config)
+
+          @state << 'configured'
+          @config = nil
+        end
+
+        def config(&block)
           @current = @root
-          @definer = SimpleDelegator.new(self)
+          @interface = SimpleDelegator.new(self)
 
           if block.arity == 1
-            block.call(@definer)
+            block.call(@interface)
           else
-            @definer.instance_exec(&block)
+            @interface.instance_exec(&block)
           end
 
           self
         ensure
-          @current = @definer = nil
+          @current = @interface = nil
         end
 
-        def define!
-          return unless @definition
-
-          define(&@definition)
-          @definition = nil
+        def clear!
+          @controller = @root = @state = nil
+          super
         end
 
         def element_type
           self.class.name.demodulize.underscore.to_sym
+        end
+
+        def nest_content(node = @root, &block)
+          @current = node
+          @interface ? @interface.instance_exec(&block) : block.call
+          node
+        ensure
+          @current = node.parent
         end
 
         def include(other)
@@ -64,13 +94,6 @@ module Torque
               super(node)
               nest_content(node, &block) if block_given?
             end
-          end
-
-          def nest_content(node, &block)
-            @current = node
-            @definer.instance_exec(&block)
-          ensure
-            @current = node.parent
           end
       end
     end

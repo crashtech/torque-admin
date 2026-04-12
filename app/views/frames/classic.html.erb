@@ -1,13 +1,13 @@
 <%= ui.body(:classic) do %>
   <%= elements.main_menu(before: app_banner) %>
 
-  <main class="ui container" style="flex: 1; padding: 1rem 0;">
+  <main class="ui fluid container" style="flex: 1; padding: 1rem 0;">
     <%= yield %>
   </main>
 
   <footer class="ui inverted vertical footer segment">
     <div class="ui center aligned container">
-      Copyright &copy; 2024
+      &copy; Torque Admin <%= Date.current.year %>
     </div>
   </footer>
 <% end %>

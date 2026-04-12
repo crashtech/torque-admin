@@ -13,27 +13,28 @@ module Torque
       end
 
       def new(type, name = nil, **options, &block)
-        klass = type.is_a?(::Class) ? as : @controller.element_constructor_for(type)
-        valid = klass.is_a?(::Class) && klass <= ::Torque::Elements::Base
-        ::Kernel.raise ::ArgumentError, "#{type} is not a valid element reference" unless valid
-
+        klass = @controller.element_class_for(type)
         instance = klass.new(name, @controller, **options)
-        return instance.render_in(@context, &block) if block.present?
+        return instance.render_in(@context, inline: true, &block) if block.present?
 
         ::Kernel.raise ::ArgumentError, +'Expected a block for inlined element' if name.nil?
         @instances[name] ||= instance
       end
 
       def fetch(name, *args, **kwargs)
-        @instances[name] ||= _find(name).call(@controller, *args, **kwargs)
+        @instances[name] ||= fetch_from_controller(name).call(@controller, *args, **kwargs)
       end
 
       alias [] fetch
 
       def respond_to?(name)
-        @instances.key?(name) || _find(name).is_a?(::Proc)
+        @instances.key?(name) || fetch_from_controller(name).is_a?(::Proc)
       rescue NotFound
         false
+      end
+
+      def rendered?(name)
+        !!@instances[name]&.rendered?
       end
 
       def respond_to_missing?(name, *)
@@ -44,11 +45,22 @@ module Torque
         respond_to?(name)
       end
 
+      def clear!
+        @instances.each_value(&:clear!)
+        @instances.clear
+      end
+
       def method_missing(name, *args, **kwargs, &block)
         return respond_to?(name[0..-2]) if name.end_with?('?')
+        name, mandatory = name[0..-2], true if name.end_with?('!')
 
         instance = fetch(name, *args, **kwargs)
-        block_given? ? instance.render_in(@controller.view_context, &block) : instance
+        block_given? ? instance.render_in(@context, &block) : instance
+      rescue NotFound => error
+        ::Kernel.raise(error) if mandatory
+
+        Elements.logger.warn("Element #{name} not found in #{@controller.class}")
+        nil
       end
 
       def inspect
@@ -57,7 +69,7 @@ module Torque
 
       protected
 
-        def _find(name)
+        def fetch_from_controller(name)
           name = name.underscore.to_sym if name.is_a?(::String)
 
           current = @controller.class

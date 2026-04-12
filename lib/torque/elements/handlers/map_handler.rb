@@ -4,19 +4,18 @@ module Torque
   module Elements
     # = Torque Elements \Map Handler
     class MapHandler < BaseHandler
-      def initialize(separator: ',', nested_separator: '_', format: nil, style: false)
+      def initialize(separator: ',', nested_separator: '_', format: nil, as_json: true)
         @separator = separator
         @nested_separator = nested_separator
         @format = format
-        @style = style
-        super()
+        @as_json = as_json
       end
 
       def combine(current, value)
         list_combine(current, value)
       end
 
-      def collapse(*values)
+      def collapse(values)
         result = {}
 
         each_value(values) do |key, value|
@@ -27,11 +26,12 @@ module Torque
           end
         end
 
-        return JSON.generate(result) unless @style
+        return JSON.generate(result) if @as_json
 
-        result.each_with_object(':').map(&:join).join(@separator)
+        result.map { |parts| parts.join(':') }.join(@separator)
       end
 
+      # TODO: For better performance, turn this into an iterative method instead of recursive
       def each_value(input, prefix: '', &block)
         case input
         when NilClass
@@ -52,7 +52,7 @@ module Torque
       end
 
       def split_string(value, &block)
-        return JSON.parse(value).each_pair(&block) unless @style
+        return JSON.parse(value).each_pair(&block) if @as_json
 
         Crass.parse_properties(value, preserve_comments: false).each do |node|
           block.call(node[:name], node[:value]) if node[:node] == :property
