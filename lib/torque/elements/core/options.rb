@@ -3,17 +3,18 @@
 module Torque
   module Elements
     module Core
-      # = Torque Elements \Core Rendering
-      module Rendering
+      # = Torque Elements \Core Options
+      module Options
         extend ActiveSupport::Concern
 
         def initialize
-          @settings = @root.options.extract!(:helper_method, :max_depth, :min_depth)
+          @options = @root.options.extract!(:max_depth, :min_depth)
           super
         end
 
-        def helper_method
-          @settings.fetch(:helper_method) { @controller.element_helper_name(name) }
+        def clear!
+          @options = nil
+          super
         end
 
         def resolve_text_for(node, option)
@@ -32,28 +33,15 @@ module Torque
           end
         end
 
-        def to_s
-          render_in(Context.view_context)
-        end
-
-        def render_in(context, inline: false, &block)
-          raise "Element #{name} has already been rendered" if rendered?
-
-          @state << 'rendering'
-          Renderer.render(self, inline: inline, &block)
-        ensure
-          @state << 'rendered'
-        end
-
-        def clear!
-          @settings = nil
-          super
-        end
-
         protected
+
+          def extract_render_options(node)
+            [nil, node.options]
+          end
 
           def text_for(value, type, subpart = nil, fallback: nil)
             return fallback if static_text?(fallback)
+            raise ::I18n::MissingTranslationData if i18n_keys.empty?
 
             values = { name: i18n_name, type: type, id: value }
             keys = map_i18n_keys(subpart) { |key| format(key, values).to_sym }
@@ -71,7 +59,7 @@ module Torque
           end
 
           def i18n_keys
-            @i18n_keys ||= @controller.elements_i18n_keys_for(self)
+            @i18n_keys ||= @context.elements_i18n_keys_for(self)
           end
 
           def text_attributes
@@ -84,12 +72,12 @@ module Torque
             value.is_a?(String) && value.frozen?
           end
 
-          def map_i18n_keys(subpart)
+          def map_i18n_keys(subpart, primary: 'label')
             i18n_keys.flat_map do |key|
               next yield(key) if subpart.nil?
 
               value = yield("#{key}.#{subpart}")
-              next value if subpart.to_s != 'label'
+              next value if subpart.to_s != primary
 
               [value, yield(key)]
             end

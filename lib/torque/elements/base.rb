@@ -3,7 +3,8 @@
 require_relative 'core/definition'
 require_relative 'core/index'
 require_relative 'core/nodes'
-require_relative 'core/rendering'
+require_relative 'core/options'
+require_relative 'core/render'
 
 module Torque
   module Elements
@@ -17,12 +18,13 @@ module Torque
 
       include Core::Index
       include Core::Nodes
-      include Core::Rendering
+      include Core::Render
 
+      include Core::Options
       include Core::Definition
 
       def inspect
-        "#<#{self.class.name} #{name} nodes=#{size}>"
+        "#<#{self.class.name} name=#{name.inspect} type=#{type.inspect} id=#{id.inspect} nodes=#{size}>"
       end
 
     end

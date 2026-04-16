@@ -10,8 +10,8 @@ module Torque
 
         attr_reader :template_keys
 
-        def initialize(template: nil, **kwargs)
-          super(**kwargs)
+        def initialize(template: nil, **)
+          super(**)
           @template_keys = TemplateKeys.new(*template.values_at(:prefixes, :source)) if template
         end
 

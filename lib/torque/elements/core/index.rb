@@ -7,14 +7,24 @@ module Torque
       module Index
         extend ActiveSupport::Concern
 
-        attr_reader :index
+        def clear!
+          @index = nil
+        end
 
-        def initialize
+        def index
+          return @index if defined?(@index)
+
           @index = { root: @root }
+          load_config!
+          @index
         end
 
         def [](key)
           index[node_id(key)]
+        end
+
+        def fetch(key)
+          index.fetch(node_id(key)) { raise KeyError, "Key not found: #{key.inspect}" }
         end
 
         def key?(key)
@@ -27,34 +37,28 @@ module Torque
           index.size - 1
         end
 
-        def clear!
-          @index = nil
-        end
-
         protected
 
           def node_id(value)
+            return if value.nil?
             return value if value == :root || (value.is_a?(String) && value.frozen?)
 
             value.to_s.downcase.gsub(/[_\s]/, '-').gsub(/[^-a-z0-9]/, '')
           end
 
           def index_node(node)
+            raise ArgumentError, +'Node must have an id' unless node.id
             raise ArgumentError, "Node with id '#{node.id}' already exists" if index.key?(node.id)
 
             index[node.id] = node
           end
 
-          alias add_node index_node
-
-          def remove_node(node)
+          def unindex_node(node)
             index.delete(node.id)
           end
 
           def reindex(node, as)
-            node = self[node] unless node.is_a?(Node)
-
-            index.delete(node.id)
+            unindex_node(node)
             index[node.instance_variable_set(:@id, as)] = node
           end
 

@@ -19,8 +19,8 @@ module Torque
         ui.render_content_tag(:title, parts.compact.join(separator))
       end
 
-      def app_banner(title = app_plain_title, **kwgargs)
-        ui.application_banner(app_logo + title, **kwgargs)
+      def app_banner(title = app_plain_title, **)
+        ui.application_banner(app_logo + title, **)
       end
 
       def app_body_classes

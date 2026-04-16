@@ -36,8 +36,8 @@ module Torque
           block.call(@pending[helper = helper.to_sym] ||= HelperBuilder.new(helper, with_content: with_content))
         end
 
-        def associate(helper, to:, **extensions)
-          @pending[helper = helper.to_sym] ||= AliasBuilder.new(helper, to, **extensions)
+        def associate(helper, to:, **)
+          @pending[helper = helper.to_sym] ||= AliasBuilder.new(helper, to, **)
         end
 
       private

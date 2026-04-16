@@ -5,30 +5,40 @@ module Torque
     NotFound = Class.new(KeyError)
 
     # = Torque Elements \Registry
-    class Registry < BasicObject
+    class Registry
       def initialize(context)
         @context = context
         @controller = context.controller
         @instances = {}
       end
 
-      def new(type, name = nil, **options, &block)
+      def new(type, name = nil, *, **, &)
         klass = @controller.element_class_for(type)
-        instance = klass.new(name, @controller, **options)
-        return instance.render_in(@context, inline: true, &block) if block.present?
+        instance = klass.new(name, @context, *, **)
 
-        ::Kernel.raise ::ArgumentError, +'Expected a block for inlined element' if name.nil?
+        return instance.render_in(@context, &) if block_given?
+        raise ::ArgumentError, +'Expected a block for inlined element' if name.nil?
+
         @instances[name] ||= instance
       end
 
-      def fetch(name, *args, **kwargs)
-        @instances[name] ||= fetch_from_controller(name).call(@controller, *args, **kwargs)
+      def store(name, type, *, **, &)
+        klass = @controller.element_class_for(type)
+        @instances[name] = klass.new(name, @context, *, **, &)
+      end
+
+      def fetch(name, *, **kwargs)
+        @instances[name] || begin
+          name, type, config = fetch_from_controller(name)
+          options = @controller.class.inherited_element_settings(name).merge(kwargs)
+          store(name, type, *, **options, &config)
+        end
       end
 
       alias [] fetch
 
       def respond_to?(name)
-        @instances.key?(name) || fetch_from_controller(name).is_a?(::Proc)
+        @instances.key?(name) || fetch_from_controller(name)
       rescue NotFound
         false
       end
@@ -50,14 +60,15 @@ module Torque
         @instances.clear
       end
 
-      def method_missing(name, *args, **kwargs, &block)
+      def method_missing(name, *, **, &)
         return respond_to?(name[0..-2]) if name.end_with?('?')
-        name, mandatory = name[0..-2], true if name.end_with?('!')
 
-        instance = fetch(name, *args, **kwargs)
-        block_given? ? instance.render_in(@context, &block) : instance
-      rescue NotFound => error
-        ::Kernel.raise(error) if mandatory
+        name, mandatory = name[0..-2], true if name.end_with?('!')
+        instance = fetch(name, *, **)
+
+        block_given? ? instance.render_in(@context, &) : instance
+      rescue NotFound => e
+        raise(e) if mandatory
 
         Elements.logger.warn("Element #{name} not found in #{@controller.class}")
         nil
@@ -70,7 +81,7 @@ module Torque
       protected
 
         def fetch_from_controller(name)
-          name = name.underscore.to_sym if name.is_a?(::String)
+          name = name.underscore.to_sym if name.is_a?(String)
 
           current = @controller.class
           while current < Controller
@@ -80,7 +91,7 @@ module Torque
             current = current.superclass
           end
 
-          ::Kernel.raise NotFound, "Element #{name} not found in #{@controller.class}"
+          raise NotFound, "Element #{name} not found in #{@controller.class}"
         end
 
     end

@@ -14,20 +14,18 @@ module Torque
       class_methods do
         attr_reader :elements
 
-        def element(name, of_type:, **options, &config)
+        def element(name, of_type:, **, &config)
           raise ArgumentError, +'A config block must be provided' unless block_given?
 
-          klass = element_class_for(of_type)
           name = name.underscore.to_sym if name.is_a?(::String)
+          change_element(name, **)
 
-          change_element(name, **options)
-          (@elements ||= {})[name] = lambda do |controller, *args, **kwargs|
-            kwargs = inherited_element_settings(name).merge(kwargs)
-            klass.new(name, controller, *args, **kwargs, &config)
-          end
+          (@elements ||= {})[name] = [name, of_type, config]
         end
 
-        def change_element(name, **options)
+        def change_element(name, options = nil)
+          return unless options
+
           name = name.underscore.to_sym if name.is_a?(::String)
           element_settings[name] = inherited_element_settings(name).merge!(options)
         end
@@ -46,25 +44,25 @@ module Torque
           name.safe_constantize
         end
 
-        private
-
-          def inherited_element_settings(name)
-            if (current = @element_settings.try(:[], name))
-              current
-            elsif superclass.respond_to?(:inherited_element_settings)
-              superclass.inherited_element_settings(name)
-            else
-              {}
-            end
+        def inherited_element_settings(name)
+          if (current = @element_settings.try(:[], name))
+            current
+          elsif superclass.respond_to?(:inherited_element_settings)
+            superclass.inherited_element_settings(name)
+          else
+            {}
           end
+        end
+
+        private
 
           def element_settings
             @element_settings ||= {}
           end
       end
 
-      def element_helper_name(name)
-        "#{controller_name}_#{name}"
+      def element_helper_name(element, node)
+        "render_#{element.type}_#{node.type}".chomp('_root')
       end
 
       def elements_i18n_keys_for(*)

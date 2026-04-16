@@ -22,10 +22,6 @@ module Torque
       class_methods do
         delegate :config, to: :admin_application, prefix: true
 
-        def element_helper_name(name)
-          "#{abstract? || anonymous? ? 'app' : admin_controller_name}_#{name}"
-        end
-
         def ui_framework
           admin_application.ui_builder.framework_name
         end
@@ -46,8 +42,8 @@ module Torque
 
         ## Quick Elements Definers
 
-        def main_menu(**kwargs, &block)
-          element(:main_menu, of_type: :menu, **kwargs, &block)
+        def main_menu(**, &)
+          element(:main_menu, of_type: :menu, detect_current: true, **, &)
         end
       end
 

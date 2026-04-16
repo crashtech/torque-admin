@@ -32,7 +32,9 @@ module Torque
         end
       end
 
-      delegate :elements, to: '::Torque::Elements::Context'
+      def elements
+        Context.elements || Registry.new(self)
+      end
 
       def _run_under(buffer, template)
         _old_output_buffer, _old_virtual_path, _old_template = @output_buffer, @virtual_path, @current_template

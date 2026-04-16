@@ -10,9 +10,9 @@ module Torque
         undef_method :render
         undef_method :instrument_render_template
 
-        def initialize(*args, details:, **kwargs)
+        def initialize(*, details:, **)
           @details = details
-          super(*args, details.handler_class, **kwargs,
+          super(*, details.handler_class, **,
             format: details.format_or_default,
             variant: details.variant&.to_s,
             locals: nil,

@@ -5,6 +5,12 @@ module Torque
     # = Torque Elements \UI Helpers
     class UiBuilder
       CONTENT_OPTIONS = (ContentHandler::PARTS - [:content]).map(&:to_s).map(&:freeze).freeze
+      SPECIAL_OPTIONS = {
+        '@node' => :noop,
+        '@content' => :flatten_content_option,
+        '@append' => :flatten_append_option,
+        '@controller' => :flatten_controller_option,
+      }
 
       attr_reader :view_context
 
@@ -28,7 +34,7 @@ module Torque
           @presets ||= Hash.new { |hash, key| hash[key] = {} }
         end
 
-        def add_preset(source, name, **options)
+        def add_preset(source, name, options)
           presets[source.to_sym][name.to_sym] = options
         end
 
@@ -104,6 +110,15 @@ module Torque
         self.class.name_of(self.class) || 'NONE'
       end
 
+      def element_helper_name(element, node)
+        view_context.controller.element_helper_name(element, node).dup.delete_prefix('render_')
+      end
+
+      def append_options(options, values)
+        (options['@append'] ||= []) << values
+        options
+      end
+
       def collapse_options(options)
         options.each_with_object({}) do |(key, value), collapsed|
           collapsed[key] = Elements.find_attribute(key).collapse(value)
@@ -120,25 +135,30 @@ module Torque
 
       def build_options(*settings)
         settings.flatten.each_with_object({}) do |input, options|
-          combine_options(options, flatten_options(input)) if input.present?
+          flatten_options!(input) { |key, value| combine_option(key, options, value) }
         end
       end
 
-      def flatten_options(options, prefix = '')
-        options.presence&.each_with_object({}) do |(key, value), result|
-          attr = attribute_name("#{prefix}#{key}")
-          if value.is_a?(Hash) && !Elements.static_attribute?(attr)
-            result.merge!(flatten_options(value, "#{prefix}#{key}-"))
-          elsif CONTENT_OPTIONS.include?(attr)
-            (result['@content'] ||= {})[attr.to_sym] = value
-          else
-            result[attr] = value
-          end
-        end
+      def flatten_options(options)
+        result = {}
+        flatten_options!(options, &result.method(:[]=))
+        result
       end
 
-      def render_content_tag(tag_name, content = nil, options = {}, &block)
-        content = view_context.capture(&block) if block_given?
+      def flatten_content_option(value, &)
+        yield('@content', value)
+      end
+
+      def flatten_append_option(value, &)
+        value.each { |append| flatten_options!(append, &) }
+      end
+
+      def flatten_controller_option(value, &)
+        value.each { |controller| controller.to_options(&) }
+      end
+
+      def render_content_tag(tag_name, content = nil, options = {}, &)
+        content = view_context.capture(&) if block_given?
         combine_option('@content', options, content) if content.present?
         render_tag(tag_name, options, with_content: true)
       end
@@ -147,7 +167,10 @@ module Torque
         options = collapse_options(options)
         left, *inner, right = options.delete('@content')&.values_at(:prepend, :before, :content, :after, :append)
         content = view_context.safe_join(inner.flatten) if with_content && inner.present?
-        view_context.safe_join([*left, tag_builder.public_send(tag_name, *content, **options), *right])
+        content = tag_builder.public_send(tag_name, *content, **options)
+        return content if left.nil? && right.nil?
+
+        view_context.safe_join([*left, content, *right])
       end
 
       def split_options_properties(source, property_list, preset_list = nil, kwargs = {})
@@ -156,7 +179,7 @@ module Torque
           next if input.blank?
 
           properties.merge!(input.extract!(*property_list))
-          combine_options(result, flatten_options(input))
+          flatten_options!(input) { |key, value| combine_option(key, result, value) }
         end
 
         [options, properties]
@@ -169,13 +192,31 @@ module Torque
       end
 
       def inspect
-        "#<Torque::Elements::UiBuilder @framework=#{framework_name}>"
+        "#<Torque::Elements::UiBuilder framework=#{framework_name}>"
       end
 
       protected
 
         def tag_builder
           view_context.tag
+        end
+
+        def flatten_options!(options, prefix = '', &)
+          options&.each do |key, value|
+            attr = attribute_name("#{prefix}#{key}")
+            if value.is_a?(Hash) && !Elements.static_attribute?(attr)
+              flatten_options!(value, "#{prefix}#{key}-", &)
+            elsif CONTENT_OPTIONS.include?(attr)
+              yield('@content', { key => value })
+            elsif attr[0] == '@' && (method_name = SPECIAL_OPTIONS[attr])
+              method(method_name).call(value, &)
+            else
+              yield(attr, value)
+            end
+          end
+        end
+
+        def noop(*)
         end
     end
   end

@@ -7,8 +7,25 @@ module Torque
       module Nodes
         extend ActiveSupport::Concern
 
-        def traverse(list = nodes, **options, &block)
-          Traverse.new(list, **@settings.slice(:max_depth, :min_depth), **options).each(&block)
+        def clear!
+          @children = nil
+          super
+        end
+
+        def children
+          @children ||= load_config!.then { @root.children }
+        end
+
+        alias nodes children
+
+        def traverse(source = children, **, &block)
+          if source.is_a?(Node)
+            return block.call(source) if source.leaf?
+
+            source = source.children
+          end
+
+          Traverse.new(source, **).each(&block)
         end
 
         def move(node, **options)
@@ -24,23 +41,18 @@ module Torque
 
         protected
 
-          delegate :children, to: :@root
-          alias nodes children
-
-          def add_node(node)
+          def append_node(node)
             add_on_position(node) || (@current || self).children << node
-            super
           end
 
-          def remove_node(node)
+          def shift_node(node)
             (node.parent || self).children.delete(node)
-            super
           end
 
           def add_on_position(node, options = node.options)
-            %i[insert_after insert_before prepend_to append_to].find do |key|
-              next unless [Node, Symbol, TrueClass, FalseClass].include?(options[key].class)
-              next unless (ref = ref_to_node(options.delete(key)))
+            options.extract!(%i[insert_after insert_before prepend_to append_to]).each_value.find do |value|
+              next unless [Node, Symbol, TrueClass, FalseClass].include?(value.class)
+              next unless (ref = ref_to_node(value))
 
               break add_on_position!(node, ref, key)
             end

@@ -12,11 +12,11 @@ module Torque
         end
 
         # Hook into render to be able to compile the upper template before rendering the source
-        def render(view, locals, *args, **kwargs, &block)
+        def render(view, locals, *, **, &block)
           @source ||= @template.build_source(view, self, @expected_locals)
 
           locals, block = locals_with_assigns(locals, block, view)
-          super(view, locals, *args, **kwargs, &block)
+          super(view, locals, *, **, &block)
         end
 
         private

@@ -23,8 +23,8 @@ module Torque
           end
         end
 
-        def initialize(*args)
-          super(*args)
+        def initialize(*)
+          super
           @_request = nil
         end
 

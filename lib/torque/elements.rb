@@ -16,7 +16,6 @@ module Torque
     autoload :Base
     autoload :Node
     autoload :Registry
-    autoload :Renderer
     autoload :Traverse
 
     autoload :Context
@@ -74,12 +73,12 @@ module Torque
 
       ## Quick access to configuration methods
 
-      def enable_ui_framework(*args, **kwargs)
-        UiBuilder.enable_framework(*args, **kwargs)
+      def enable_ui_framework(...)
+        UiBuilder.enable_framework(...)
       end
 
-      def add_ui_framework(*args, **kwargs)
-        UiBuilder.add_framework(*args, **kwargs)
+      def add_ui_framework(...)
+        UiBuilder.add_framework(...)
       end
 
       def ui_framework_helper(name)

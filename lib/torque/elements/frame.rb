@@ -117,8 +117,8 @@ module Torque
           case name
           when String     then _normalize_frame(name)
           when Proc       then name
-          when true       then Proc.new { |*args| _default_frame(*args, true)  }
-          when :default   then Proc.new { |*args| _default_frame(*args, false)  }
+          when true       then proc { |*args| _default_frame(*args, true) }
+          when :default   then proc { |*args| _default_frame(*args, false) }
           when false, nil then nil
           else
             raise ArgumentError, <<~MSG.squish

@@ -27,8 +27,8 @@ module Torque
         instances[name.to_sym] ||= Application.new(name)
       end
 
-      def configure(&block)
-        self[:default].configure(&block)
+      def configure(...)
+        self[:default].configure(...)
       end
 
       def instances

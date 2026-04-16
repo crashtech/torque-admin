@@ -32,30 +32,30 @@ module Torque
       end
 
       # TODO: For better performance, turn this into an iterative method instead of recursive
-      def each_value(input, prefix: '', &block)
+      def each_value(input, prefix: '', &)
         case input
         when NilClass
           # Do nothing for nil values
         when Hash
-          input.each { |key, value| each_value(value, prefix: prefix + key.to_s + @nested_separator, &block) }
+          input.each { |key, value| each_value(value, prefix: prefix + key.to_s + @nested_separator, &) }
         when Enumerable
-          input.each { |value| each_value(value, prefix: prefix, &block) }
+          input.each { |value| each_value(value, prefix: prefix, &) }
         when TrueClass, FalseClass
-          block.call(prefix.chomp(@nested_separator), input) unless prefix.empty?
+          yield(prefix.chomp(@nested_separator), input) unless prefix.empty?
         else
           if prefix.empty?
             split_string(input.to_s, &block)
           else
-            block.call(prefix.chomp(@nested_separator), input.to_s.strip)
+            yield(prefix.chomp(@nested_separator), input.to_s.strip)
           end
         end
       end
 
-      def split_string(value, &block)
-        return JSON.parse(value).each_pair(&block) if @as_json
+      def split_string(value, &)
+        return JSON.parse(value).each_pair(&) if @as_json
 
         Crass.parse_properties(value, preserve_comments: false).each do |node|
-          block.call(node[:name], node[:value]) if node[:node] == :property
+          yield(node[:name], node[:value]) if node[:node] == :property
         end
       end
     end

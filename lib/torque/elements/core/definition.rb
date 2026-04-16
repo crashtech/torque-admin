@@ -10,89 +10,128 @@ module Torque
         attr_reader :name, :options, :state, :root
 
         delegate :id, to: :root
-        delegate :initiated?, :configured?, :rendering?, :rendered?, to: :state
 
-        def initialize(name, controller, *args, **options, &config)
+        %i[initiated? loading? loaded? rendering? rendered?].each do |state_method|
+          define_method(state_method) { @state.include?(state_method.to_s.chomp('?')) }
+        end
+
+        def initialize(name, context, *args, **options, &config)
           @name = name
-          @state = [].inquiry
-          @controller = controller
+          @state = Set.new
+          @context = context
           @config = config
 
           options = args.grep(Symbol).product([true]).to_h.merge(options)
-          @root = Node.new(node_id(name), :root, nil, true, **options)
+          @root = build_node(name, :root, options)
 
           super()
-          validate!
-
           @state << 'initiated'
         end
 
-        def change(identifier, **options)
-          self[identifier]&.options&.merge!(options)
+        def clear!
+          @context = @config = @root = @state = nil
+          super
         end
 
-        def validate!
-          # Override in subclasses to perform validation after the definition
-        end
+        def load_config!
+          return self if loaded?
 
-        def config!
-          return self if configured?
+          @state << 'loading'
+          load(&@config) if @config
 
-          config(&@config)
-
-          @state << 'configured'
+          @state << 'loaded'
+        ensure
+          @state.delete('loading')
           @config = nil
         end
 
-        def config(&block)
-          @current = @root
+        def load(into: @root, &)
           @interface = SimpleDelegator.new(self)
-
-          if block.arity == 1
-            block.call(@interface)
-          else
-            @interface.instance_exec(&block)
-          end
-
+          nest_content(into, &)
           self
         ensure
           @current = @interface = nil
         end
 
-        def clear!
-          @controller = @root = @state = nil
-          super
+        def type
+          raise NotImplementedError, +'Subclasses must implement the #type method'
         end
 
-        def element_type
-          self.class.name.demodulize.underscore.to_sym
+        def change(identifier, **)
+          self[identifier]&.change(**)
         end
 
-        def nest_content(node = @root, &block)
-          @current = node
-          @interface ? @interface.instance_exec(&block) : block.call
-          node
-        ensure
-          @current = node.parent
+        def change!(identifier, **)
+          fetch(identifier).change!(**)
         end
 
-        def include(other)
-          other = @controller.elements[other] unless other.is_a?(Base)
+        def remove(node)
+          raise(+'Cannot remove node after it has been rendered') if rendered?
+
+          node = fetch(node) unless node.is_a?(Node)
+          unindex_node(node)
+          shift_node(node)
+        end
+
+        alias delete remove
+
+        def import(other, from = :root)
+          return import_nodes(other, nil) if other.is_a?(Array)
+          return import_nodes([other], other) if other.is_a?(Node)
+
+          other = @context.elements[other] unless other.is_a?(Base)
           raise ArgumentError, "Expected an element definition, got #{other.class.name}" unless other.is_a?(Base)
 
-          append_to = @current&.children || nodes
-          other.traverse do |node|
-            index_node(node)
-            append_to << node unless node.parent
-          end
+          from = other.fetch(from)
+          import_nodes(from =~ :root ? from.children : [from], from)
         end
 
         protected
 
+          def build_node(id, type, options = {}, skip_depth: false)
+            Node.new(node_id(id), type, options, element: self, parent: @current || @root, skip_depth: skip_depth)
+          end
+
           def add_node(id, type, skip_depth: false, **options, &block)
-            Node.new(node_id(id), type, @current || @root, skip_depth, **options).tap do |node|
-              super(node)
+            build_node(id, type, options, skip_depth: skip_depth).tap do |node|
+              add_node!(node)
               nest_content(node, &block) if block_given?
+            end
+          end
+
+          def nest_content(node = @root, &block)
+            @current = node
+
+            args = block.arity == 1 ? @interface : nil
+
+            if !loading? && rendering?
+              rendered[node] = @context.capture(*args, &block)
+            elsif args
+              block.call(args)
+            else
+              @interface.instance_exec(&block)
+            end
+
+            node
+          ensure
+            @current = node.parent
+          end
+
+          def add_node!(node)
+            return unless loading?
+
+            append_node(node)
+            index_node(node) if node.id
+          end
+
+          def import_nodes(list, base)
+            load_config!
+            traverse(list) do |node|
+              new_node = node.dup
+              new_node.instance_variable_set(:@element, self)
+
+              index_node(node)
+              append_to << node if node.parent == base
             end
           end
       end

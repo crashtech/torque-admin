@@ -19,27 +19,27 @@ module Torque
       end
 
       # TODO: For better performance, turn this into an iterative method instead of recursive
-      def each_value(input, part = :content, &block)
+      def each_value(input, part = :content, &)
         case input
         when NilClass
           # Do nothing for nil values
         when Hash
-          input.each { |key, value| each_value(value, key, &block) if PARTS.include?(key) }
+          input.each { |key, value| each_value(value, key, &) if PARTS.include?(key) }
         when Enumerable
           iter = part == :prepend ? :reverse_each : :each
-          input.send(iter) { |value| each_value(value, part, &block) }
+          input.send(iter) { |value| each_value(value, part, &) }
         when Method
-          each_value(input.call, part, &block)
+          each_value(input.call, part, &)
         when Proc
-          each_value(view_context.instance_exec(&input), part, &block)
+          each_value(view_context.instance_exec(&input), part, &)
         when Symbol
           if view_context.respond_to?(input)
-            each_value(view_context.public_send(input), part, &block)
+            each_value(view_context.public_send(input), part, &)
           else
-            block.call(part, input.to_s)
+            yield(part, input.to_s)
           end
         else
-          block.call(part, input)
+          yield(part, input)
         end
       end
     end
