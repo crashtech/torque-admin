@@ -3,18 +3,28 @@
 module Torque
   module Elements
     module Core
-      # = Torque Elements \Core Options
-      module Options
+      # = Torque Elements \Core Helpers
+      module Helpers
         extend ActiveSupport::Concern
 
+        attr_reader :settings
+
         def initialize
-          @options = @root.options.extract!(:max_depth, :min_depth)
+          @settings = @root.options.extract!(*element_settings)
           super
         end
 
         def clear!
-          @options = nil
+          @settings = nil
           super
+        end
+
+        def element_settings
+          %i[max_depth min_depth]
+        end
+
+        def apply_sorting!(range = nil, &block)
+          sortable_lists(range).each { |list| list.sort_by!(&block) }
         end
 
         def resolve_text_for(node, option)

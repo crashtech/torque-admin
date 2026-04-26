@@ -16,6 +16,8 @@ module Torque
         end
 
         def initialize(name, context, *args, **options, &config)
+          raise NotImplementedError, +'Cannot instantiate an abstract class' if self.class.abstract_class?
+
           @name = name
           @state = Set.new
           @context = context

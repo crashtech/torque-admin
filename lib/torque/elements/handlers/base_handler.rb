@@ -19,9 +19,7 @@ module Torque
       protected
 
         def list_combine(current, value)
-          return value if current.nil?
-
-          current.is_a?(Array) ? current << value : [current, value]
+          current.nil? ? [value] : current << value
         end
 
         def format(value)

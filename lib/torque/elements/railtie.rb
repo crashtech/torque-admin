@@ -20,7 +20,7 @@ module Torque
 
         Elements.define_attribute('style', MapHandler.new(separator: ';', format: :dasherize, as_json: false))
         Elements.define_attribute('class', ListHandler.new)
-        Elements.define_attribute('name', FormatHandler.new('[%s]', include_first: false))
+        # Elements.define_attribute('name', FormatHandler.new('[%s]', include_first: false))
 
         if defined?(Stimulus::Engine)
           Elements.define_attribute('data-controller', ListHandler.new(nested_separator: '--'))

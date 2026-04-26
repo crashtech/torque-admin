@@ -12,3 +12,8 @@ Style/TrailingCommaInArguments:
 
 Style/TrailingCommaInHashLiteral:
   EnforcedStyleForMultiline: comma
+
+
+# To be enabled
+Style/Documentation:
+  Enabled: false

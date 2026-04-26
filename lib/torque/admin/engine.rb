@@ -8,6 +8,9 @@ module Torque
 
       class << self
         attr_reader :admin_application
+        attr_accessor :mounted
+
+        alias mounted? mounted
 
         def build(admin_application)
           klass = Class.new(self)

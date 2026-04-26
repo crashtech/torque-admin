@@ -47,7 +47,7 @@ module Torque
           def render_traverse(node)
             return if node.leaf?
 
-            options = node =~ :root ? @options.slice(:max_depth, :min_depth) : {}
+            options = node =~ :root ? settings.slice(:max_depth, :min_depth) : {}
             traverse(node.children, **options).with_content do |node, content|
               invoke_renderer(node, content)
             end

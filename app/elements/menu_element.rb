@@ -3,25 +3,18 @@
 module Torque
   module Admin
     # = Torque Admin \Menu Element
-    class MenuElement < Elements::Base
-      attr_accessor :sort, :icons, :detect_current
-      attr_writer :icon_position
-
-      def initialize(*, sort: nil, icons: nil, detect_current: nil, **, &)
-        @sort = sort
-        @icons = icons
-        @detect_current = detect_current
-
-        super(*, **, &)
-      end
-
+    class MenuElement < BaseElement
       def clear!
-        @sort = @icons = @detect_current = @icons_helper = @detect_current_helper = nil
+        @icons_helper = @detect_current_helper = nil
         super
       end
 
       def type
         :menu
+      end
+
+      def element_settings
+        super + %i[sort icons detect_current icon_position]
       end
 
       ## Define nodes
@@ -44,8 +37,8 @@ module Torque
         return super unless node =~ :item
 
         node[:href] = @context.url_for(node[:href]) if node[:href]
-        change_current_indicator(node) if @detect_current
-        icons_helper.call(node) if @icons
+        change_current_indicator(node) if settings[:detect_current]
+        icons_helper.call(node) if settings[:icons]
         super
       end
 
@@ -55,8 +48,8 @@ module Torque
 
       ## Overrides
 
-      def define(*)
-        @sort ? super.tap { apply_sorting!(@sort) } : super
+      def load_config!(*)
+        settings[:sort] ? super.tap { apply_sorting! } : super
       end
 
       ## Others
@@ -65,8 +58,8 @@ module Torque
         index.each_value.select { |node| node.options[:href] }
       end
 
-      def apply_sorting!(mode = @sort)
-        sortable_lists(mode).each { |list| list.sort_by!(&method(:label_for)) }
+      def apply_sorting!(mode = settings[:sort])
+        super(mode) { |node| label_for(node) }
       end
 
       def label_for(node)
@@ -82,23 +75,23 @@ module Torque
       end
 
       def detect_current_helper
-        @detect_current_helper ||= @context.method(TrueClass === @detect_current ? :current_page? : @detect_current)
+        @detect_current_helper ||= begin
+          method = TrueClass === settings[:detect_current] ? :current_page? : settings[:detect_current]
+          method.respond_to?(:call) ? method : @context.method(method)
+        end
       end
 
       def icons_helper
         @icons_helper ||=
-          if @icons.is_a?(Hash)
-            index = @icons.transform_keys { |key| node_id(key) }
+          if settings[:icons].is_a?(Hash)
+            index = settings[:icons].transform_keys { |key| node_id(key) }
             ->(node) { node[:icon] = index[node.id] }
           else
-            helper = TrueClass === @icons ? :icon : @icons
+            helper = TrueClass === settings[:icons] ? :icon : settings[:icons]
             helper = @context.respond_to?(helper) ? @context.method(helper) : @context.ui.method(helper)
-            ->(node) { node.append(icon_position => helper.call(node.id)) }
+            position = settings.fetch(:icon_position, :after)
+            ->(node) { node.append(position => helper.call(node.id)) }
           end
-      end
-
-      def icon_position
-        @icon_position ||= :after
       end
 
       protected
@@ -111,9 +104,10 @@ module Torque
           result = mode == :children ? [] : [nodes]
 
           while queue.any?
-            current = queue.shift
-            queue += current.children if current.branch?
-            result << current.children
+            if (current = queue.shift).branch?
+              queue += current.children
+              result << current.children
+            end
           end
 
           result

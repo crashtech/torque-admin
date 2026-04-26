@@ -12,6 +12,11 @@ module Torque
         # By default, it is set to nil, which will render the title as the application name.
         title: nil,
 
+        # The path to the admin application. By default, it is set to nil, which will require that information at the
+        # moment of mounting the application in the main application routes. Setting it to a plain string will set the
+        # root path of the admin application.
+        root_path: nil,
+
         # The name of the parent module in which the admin application module will be defined. By default, it is set to
         # +Object+, which means at the top level.
         parent_module: 'Object',
@@ -26,6 +31,10 @@ module Torque
         # application. Set it as a plain string to not cause an unnecessary load of the constant. By default, it is set
         # to +ApplicationController+.
         base_controller: 'ApplicationController',
+
+        # Indicates whether the admin application should require an authentication by default. By default, it is set
+        # to +true+.
+        default_authenticated: true,
 
         # The name of the theme to use for the admin application. The default options are: bootstrap, bulma,
         # semantic_ui, and tailwind. By default, it is set to +tailwind+.

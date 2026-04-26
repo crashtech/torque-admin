@@ -26,6 +26,11 @@ module Torque
         yield config
       end
 
+      def mount_options(path, options)
+        config.root_path ||= path || options[:at] || options[:path] || name.to_s
+        options.except(:path).reverse_merge(as: name, at: config.root_path)
+      end
+
       def base_controller
         @base_controller ||= mod.const_get(:BaseController)
       end
@@ -55,6 +60,9 @@ module Torque
         def setup_additional_config
           @config.title ||= @name.to_s.titleize
           @config.elements_lookup_context << mod.name
+
+          engine.config.default_scope[:authenticated] = @config.default_authenticated
+
           ActiveSupport::Reloader.to_prepare(&method(:clear))
         end
 

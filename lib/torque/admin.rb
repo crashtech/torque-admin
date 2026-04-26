@@ -48,6 +48,7 @@ module Torque
       app_autoload :ResourceController
       app_autoload :DashboardController
 
+      app_autoload :BaseElement
       app_autoload :MenuElement
 
       app_autoload :ApplicationHelper
