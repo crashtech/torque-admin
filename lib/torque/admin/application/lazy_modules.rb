@@ -5,6 +5,8 @@ module Torque
     class Application
       module LazyModules
         MODULES = {
+          Resource: :fetch_resource_class,
+
           BaseController: :fetch_base_controller,
           ResourceController: [:build_controller, 'Torque::Admin::ResourceController'],
           DashboardController: [:build_controller, 'Torque::Admin::DashboardController'],
@@ -24,6 +26,10 @@ module Torque
             klass.include(*extensions.map(&:constantize))
             klass.abstract!
             klass
+          end
+
+          def fetch_resource_class(mod)
+            Class.new(Resource)
           end
         end
 

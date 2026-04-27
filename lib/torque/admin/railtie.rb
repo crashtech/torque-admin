@@ -18,6 +18,7 @@ module Torque
         ::Rails::Railtie::ABSTRACT_RAILTIES << 'Torque::Admin::Engine'
 
         ActionDispatch::Routing::Mapper.include(Routing)
+        ActionDispatch::Routing::Mapper::Mapping.singleton_class.prepend(Mapper::Mapping)
         Mapper.send(:undef_method, :admin)
       end
     end

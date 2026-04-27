@@ -14,6 +14,7 @@ module Torque
 
     autoload :Application
     autoload :Engine
+    autoload :Resource
 
     # = Torque Admin \Themes
     module Themes

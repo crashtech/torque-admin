@@ -19,6 +19,8 @@ module Torque
         @engine = Admin::Engine.build(self)
         @mod = setup_application_module
 
+        @resources = {}
+
         setup_additional_config
       end
 
@@ -44,6 +46,7 @@ module Torque
       end
 
       def clear
+        @resources = {}
         @ui_builder = nil
         @base_controller = nil
         LazyModules::MODULES.each_key do |mod_name|
@@ -51,8 +54,28 @@ module Torque
         end
       end
 
+      def auto_dashboard_route
+        Mapper.new(engine.routes, self).with_default_scope(engine.routes.default_scope) { default_root_dashboard }
+      end
+
+      def use_relative_resource_naming?
+        mod.respond_to?(:use_relative_model_naming?) && mod.use_relative_model_naming?
+      end
+
+      def fetch_resource(name)
+        @resources[name] ||= mod::Resource.new(name)
+      end
+
+      def fetch_resource_for(controller)
+        mod::Resource.mapping_for(controller)
+      end
+
       def inspect
-        "#<#{self.class.name} @name=#{name == :admin ? ':default' : name.inspect} @engine=#{engine.name}>"
+        "#<#{self.class.name} #{<<~INSPECT}>".squish
+          name=#{name == :admin ? ':default' : name.inspect}
+          engine=#{engine.name}
+          resources=#{resources.size}
+        INSPECT
       end
 
       private
@@ -90,7 +113,7 @@ module Torque
         end
 
         def setup_hybrid_module(mod)
-          mod.class_eval <<~RUBY, __FILE__, __LINE__ + 1
+          mod.instance_eval <<~RUBY, __FILE__, __LINE__ + 1
             def table_name_prefix; end
             def use_relative_model_naming?; false; end
           RUBY

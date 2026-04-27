@@ -18,8 +18,12 @@ module Torque
           mount(app.engine, **app.mount_options(path, options))
           app.engine.mounted = true
 
-          app.engine.routes.clear!
-          @set.append(&app.engine.routes.method(:finalize!))
+          routes = app.engine.routes
+          routes.define_singleton_method(:admin_application) { app }
+
+          routes.clear!
+          routes.append { app.auto_dashboard_route }
+          @set.append { routes.finalize! }
         end
     end
   end
