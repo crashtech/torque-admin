@@ -6,7 +6,8 @@ module Torque
     class Resource
       delegate :admin_application, to: 'self.class.module_parent'
 
-      attr_reader :name, :sections, :actions, :primary_handler
+      attr_reader :name, :sections, :widgets, :actions, :primary_handler
+
       delegate :controller_class, to: :primary_handler
 
       class Handler < SimpleDelegator
@@ -28,7 +29,11 @@ module Torque
         end
 
         def inspect
-          "#<#{self.class.name} name=#{name.inspect} controller=#{controller.inspect}#{' singleton=true' if singleton?}>"
+          "#<#{self.class.name} #{<<~INSPECT.chomp}>".squish
+            name=#{name.inspect}
+            controller=#{controller.inspect}
+            #{' singleton=true' if singleton?}
+          INSPECT
         end
       end
 
@@ -37,35 +42,39 @@ module Torque
         @primary_handler = nil
 
         @sections = Set.new
-        @actions = { member: Set.new, collection: Set.new, widget: Set.new }
+        @widgets = { collection: Set.new, member: Set.new }
+        @actions = { collection: Set.new, member: Set.new }
         @handlers = {}
       end
 
       def enhance_from_route(scope, action_name)
-        action_name = action_name.to_s
-        @sections << scope[:section] if scope[:section]
+        if (section = scope.annotation(:section))
+          @sections << section
+        end
 
-        case scope.scope_level
-        when :widget then @actions[:widget] << action_name
-        when :new, :collection then @actions[:collection] << action_name
-        when :member, :resource, :resources then @actions[:member] << action_name
-        when :actions
-          @actions[:collection] << action_name
-          @actions[:member] << action_name
+        list = scope.annotated?(:type, :widget) ? @widgets : @actions
+        if scope.scope_level == :action
+          list[:member] << action_name
+          list[:collection] << action_name
+        elsif scope.scope_level == :new || scope.scope_level == :collection
+          list[:collection] << action_name
+        else
+          list[:member] << action_name
         end
       end
 
-      def fetch_handler(controller, singleton = false)
-        @primary_handler ||= @handlers[controller] ||= Handler.new(self, controller, singleton)
+      def assign_handler(controller, singleton)
+        @handlers[controller] ||= Handler.new(self, controller, singleton).tap do |handler|
+          @primary_handler ||= handler
+        end
       end
 
       def inspect
-        "#<#{self.class.name} #{<<~INSPECT}>".squish
+        "#<#{self.class.name} #{<<~INSPECT.chomp}>".squish
           name=#{name.inspect}
           handlers=#{@handlers.size}
-          widgets=#{@actions[:widget].size}
-          member_actions=#{@actions[:member].size}
-          collection_actions=#{@actions[:collection].size}
+          widgets=[#{@widgets.each_value.map(&:size).join(', ')}]
+          actions=[#{@actions.each_value.map(&:size).join(', ')}]
         INSPECT
       end
 

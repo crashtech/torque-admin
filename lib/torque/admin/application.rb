@@ -54,8 +54,8 @@ module Torque
         end
       end
 
-      def auto_dashboard_route
-        Mapper.new(engine.routes, self).with_default_scope(engine.routes.default_scope) { default_root_dashboard }
+      def auto_dashboard_route(routes = engine.routes)
+        Mapper.new(routes).with_default_scope(routes.default_scope) { dashboard_root }
       end
 
       def use_relative_resource_naming?
@@ -71,10 +71,10 @@ module Torque
       end
 
       def inspect
-        "#<#{self.class.name} #{<<~INSPECT}>".squish
+        "#<#{self.class.name} #{<<~INSPECT.chomp}>".squish
           name=#{name == :admin ? ':default' : name.inspect}
           engine=#{engine.name}
-          resources=#{resources.size}
+          resources=#{@resources.size}
         INSPECT
       end
 
@@ -84,7 +84,10 @@ module Torque
           @config.title ||= @name.to_s.titleize
           @config.elements_lookup_context << mod.name
 
-          engine.config.default_scope[:authenticated] = @config.default_authenticated
+          engine.config.default_scope[:annotations] = {
+            admin_application: self,
+            authenticated: @config.default_authenticated,
+          }
 
           ActiveSupport::Reloader.to_prepare(&method(:clear))
         end

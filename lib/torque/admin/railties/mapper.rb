@@ -12,33 +12,20 @@ module Torque
             constraints: scope[:constraints] || {},
             defaults: (scope[:defaults] || {}).dup,
             module: scope[:module],
-            options: scope[:options] || {},
+            options: (options = scope[:options] || {}),
           }
 
-          options = scope.to_params
-          if (resource = fetch_admin_resource(scope, set))
-            resource.enhance_from_route(scope, da)
-            controller = [*scope[:module], c].join('/')
-            options[:resource] = resource.fetch_handler(controller, scope[:scope_level_resource].singleton?)
-          end
-
+          scope.annotate!(c, da, scope_params)
           new set: set, ast: ast, controller: c, default_action: da,
               to: to, formatted: f, via: via, options_constraints: oc,
-              anchor: a, scope_params: scope_params.deep_merge(options: options),
-              internal: i, options: scope_params[:options].merge(o)
-        end
-
-        def fetch_admin_resource(scope, set)
-          return unless (resource = scope[:scope_level_resource])
-
-          name = [*scope[:module], resource.singular].join('/')
-          set.admin_application.fetch_resource(name)
+              anchor: a, scope_params: scope_params,
+              internal: i, options: options.merge(o)
         end
       end
 
       module Scoping
         def unauthenticated(&block)
-          scope(authenticated: false, &block)
+          annotate(authenticated: false, &block)
         end
 
         def with_actions(*actions, &block)
@@ -46,7 +33,7 @@ module Torque
         end
 
         def section(name, &block)
-          scope(path: name, as: name, section: name, &block)
+          scope(path: name, as: name, annotations: { section: name }, &block)
         end
 
         def without_actions(*actions, &block)
@@ -57,14 +44,14 @@ module Torque
           with_scope_level(:simple, &block)
         end
 
+        def annotate(annotations, &block)
+          scope(annotations: annotations, &block)
+        end
+
         private
 
-          def merge_section_scope(parent, child)
-            merge_blocks_scope(parent, child)
-          end
-
-          def merge_authenticated_scope(_, child)
-            child
+          def merge_annotations_scope(parent, child)
+            merge_options_scope(parent, child)
           end
 
           def merge_add_actions_scope(parent, child)
@@ -82,10 +69,9 @@ module Torque
             end
           end
 
-          def initialize(entity, simple, *, actions: nil, source: nil, **)
+          def initialize(entity, simple, *, source: nil, **)
             super(entity, false, *, **)
             @simple = simple
-            @actions = actions
             @singular = source&.to_s&.underscore
           end
 
@@ -100,11 +86,9 @@ module Torque
           def actions_scope
             "#{path}(/:#{param})"
           end
-
-          def extra_actions
-            @actions
-          end
         end
+
+        delegate :action_scope?, to: :@scope
 
         Resource = Class.new(ActionDispatch::Routing::Mapper::Resources::Resource)
         Resource.prepend AdminResource
@@ -115,15 +99,14 @@ module Torque
         def resource(*resources, concerns: nil, actions: nil, source: nil, widgets: nil, **options, &)
           return self if apply_common_behavior_for(:resource, resources, concerns:, **options, &)
 
-          options = apply_action_options(:resource, options, actions).merge(source: source)
-          instance = SingletonResource.new(resources.pop, @scope.simple_resource?, @scope[:shallow], **options)
+          options = apply_action_options(:resource, options).merge(source: source)
+          instance = SingletonResource.new(resources.pop, @scope.simple?, @scope[:shallow], **options)
 
           with_scope_level(:resource) do
             resource_scope(instance) do
               yield if block_given?
               concerns(*concerns) if concerns
-              widgets(*widgets) if widgets
-              draw_mappings_for_resource(instance)
+              draw_mappings_for_resource(instance, actions, widgets)
             end
           end
         end
@@ -131,56 +114,43 @@ module Torque
         def resources(*resources, concerns: nil, actions: nil, source: nil, widgets: nil, **options, &)
           return self if apply_common_behavior_for(:resources, resources, concerns:, **options, &)
 
-          options = apply_action_options(:resources, options, actions).merge(source: source)
-          instance = Resource.new(resources.pop, @scope.simple_resource?, @scope[:shallow], **options)
+          options = apply_action_options(:resources, options).merge(source: source)
+          instance = Resource.new(resources.pop, @scope.simple?, @scope[:shallow], **options)
 
           with_scope_level(:resources) do
             resource_scope(instance) do
               yield if block_given?
               concerns(*concerns) if concerns
-              widgets(*widgets) if widgets
-              draw_mappings_for_resources(instance)
+              draw_mappings_for_resources(instance, actions, widgets)
             end
           end
         end
 
-        def actions(&block)
-          raise ArgumentError, +"can't use actions outside resource(s) scope" unless resource_scope?
+        def actions(*, **, &block)
+          raise ArgumentError, +"can't use actions outside resource(s) scope" unless parent_resource
 
-          with_scope_level(:action) do
-            if shallow?
-              shallow_scope { path_scope(parent_resource.actions_scope, &block) }
-            else
-              path_scope(parent_resource.actions_scope, &block)
+          block = -> { action(*, **) } unless block_given?
+          block = block.then { |b| -> { path_scope(parent_resource.actions_scope, &b) } } unless resource_method_scope?
+          block = block.then { |b| -> { shallow_scope(&b) } } if shallow?
+          with_scope_level(:action, &block)
+        end
+
+        def action(*actions, view: false, add_alias: false, action: nil, via: :patch)
+          return actions(*actions, view: view, add_alias: add_alias, action: action, via: via) unless action_scope?
+
+          annotate(type: :action) do
+            actions.each do |name|
+              view ? get(name, action: action).match(name, via: via) : match(name, action: action, via: via)
+              add_alias_for_action(action) if add_alias
             end
           end
         end
 
-        def action(*actions, view: false, add_alias: false, action: nil)
-          unless resource_method_scope?
-            return actions { action(*actions, view: view, add_alias: add_alias, action: action) }
-          end
+        def widgets(*list, action: nil, on: nil)
+          raise ArgumentError, +"can't use widgets outside resource(s) scope" unless parent_resource
 
-          options = { action: action } if action
-          actions.each do |action|
-            view ? get(action, **options).patch(action) : patch(action, **options)
-            add_alias_for_action(action) if add_alias
-          end
-        end
-
-        def widgets(*list, action: nil)
-          raise ArgumentError, +"can't use widgets outside resource(s) scope" unless @scope[:scope_level_resource]
-
-          if @scope.scope_level == :resources
-            return collection { widgets(*list, action: action) }
-          elsif @scope.scope_level == :resource
-            return member { widgets(*list, action: action) }
-          end
-
-          options = { action: action } if action
-          with_scope_level(:widget) do
-            list.each { |widget| get(widget, **options) }
-          end
+          on ||= @scope.scope_level == :resources ? :collection : :member if resource_scope?
+          annotate(type: :widget) { list.each { |widget| get(widget, action: action, on: on) } }
         end
 
         def searchable(*resources, source: nil, **)
@@ -211,12 +181,6 @@ module Torque
             super if as != ActionDispatch::Routing::Mapper::DEFAULT || %w[destroy upsert].exclude?(action)
           end
 
-          def apply_action_options(method, options, actions)
-            result = super(method, options)
-            result[:actions] = [*actions, *@scope[:add_actions]]
-            result
-          end
-
           def applicable_actions_for(method)
             AdminResource.default_actions(method == :resource)
           end
@@ -231,46 +195,50 @@ module Torque
             end
           end
 
-          def draw_mappings_for_resource(resource) # rubocop:disable Metrics/*
-            actions = resource.actions.to_set
+          def draw_mappings_for_resource(resource, actions, widgets) # rubocop:disable Metrics/*
+            set = resource.actions.to_set
 
-            new { get(:new) } if actions.include?(:new)
+            widgets(*widgets) if widgets
+
+            new { get(:new) } if set.include?(:new)
 
             member do
-              action(*resource.extra_actions, add_alias: true) if resource.extra_actions
-              delete(:destroy) if actions.include?(:destroy)
+              action(*actions, add_alias: true) if actions
+              delete(:destroy) if set.include?(:destroy)
 
-              get(:preview) if actions.include?(:preview)
-              get(:edit) if actions.include?(:edit)
-              get(:show) if actions.include?(:show)
-              patch(:update).put(:update) if actions.include?(:update)
+              get(:preview) if set.include?(:preview)
+              get(:edit) if set.include?(:edit)
+              get(:show) if set.include?(:show)
+              patch(:update).put(:update) if set.include?(:update)
             end
 
-            collection { post(:create) } if actions.include?(:create)
+            collection { post(:create) } if set.include?(:create)
           end
 
-          def draw_mappings_for_resources(resource) # rubocop:disable Metrics/*
-            actions = resource.actions.to_set
+          def draw_mappings_for_resources(resource, actions, widgets) # rubocop:disable Metrics/*
+            set = resource.actions.to_set
+
+            widgets(*widgets) if widgets
 
             collection do
-              get(:search) if actions.include?(:search)
-              get(:index) if actions.include?(:index)
-              post(:create) if actions.include?(:create)
-              patch(:upsert).put(:upsert) if actions.include?(:upsert)
+              get(:search) if set.include?(:search)
+              get(:index) if set.include?(:index)
+              post(:create) if set.include?(:create)
+              patch(:upsert).put(:upsert) if set.include?(:upsert)
             end
 
-            new { get(:new) } if actions.include?(:new)
+            new { get(:new) } if set.include?(:new)
 
             actions do
-              action(*resource.extra_actions, add_alias: true) if resource.extra_actions
-              delete(:destroy) if actions.include?(:destroy)
+              action(*actions, add_alias: true) if actions
+              delete(:destroy) if set.include?(:destroy)
             end
 
             member do
-              get(:preview) if actions.include?(:preview)
-              get(:edit) if actions.include?(:edit)
-              get(:show) if actions.include?(:show)
-              patch(:update).put(:update) if actions.include?(:update)
+              get(:preview) if set.include?(:preview)
+              get(:edit) if set.include?(:edit)
+              get(:show) if set.include?(:show)
+              patch(:update).put(:update) if set.include?(:update)
             end
           end
       end
@@ -289,7 +257,7 @@ module Torque
           end
         end
 
-        def default_root_dashboard(as: :dashboard)
+        def dashboard_root(as: :dashboard)
           dashboard(as: as, with_alias: false) unless @set.named_routes.key?(:dashboard)
           add_dashboard_root_alias(as)
         end
@@ -316,38 +284,68 @@ module Torque
       end
 
       class Scope < ActionDispatch::Routing::Mapper::Scope
-        ADMIN_OPTIONS = %i[authenticated add_actions section].freeze
+        ADMIN_OPTIONS = %i[annotations add_actions].freeze
 
         def options
           ADMIN_OPTIONS + super
         end
 
-        def simple_resource?
+        def annotate!(controller, action, params)
+          return unless (notes = @hash[:annotations])
+
+          resource = annotate_resource(controller, action)
+
+          data = notes.slice(:section, :authenticated)
+          data[:resource] = resource if resource
+          data[:type] = annotation(:type) || scope_level
+
+          params[:options] = params[:options].merge(annotations: data)
+        end
+
+        def simple?
           scope_level == :simple
         end
 
-        def resource_method_scope?
-          scope_level == :action || scope_level == :widget || super
+        def action_scope?
+          scope_level == :action
+        end
+
+        def annotation(name)
+          @hash[:annotations]&.[](name)
+        end
+
+        def annotated?(key, value)
+          annotation(key) == value
         end
 
         def action_name(name_prefix, prefix, collection_name, member_name)
-          case scope_level
-          when :action then [prefix, name_prefix, collection_name]
+          case annotation(:type)
+          when :action
+            [prefix, name_prefix, collection_name]
           when :widget
-            [name_prefix, parent.scope_level == :member ? member_name : collection_name, prefix]
+            source = parent.scope_level == :member ? member_name : collection_name
+            [name_prefix, source, prefix]
           else super
           end
         end
 
-        def to_params
-          @hash.slice(:authenticated).merge(type: scope_level, section: @hash[:section]).compact
-        end
+        private
+
+          def annotate_resource(controller, action)
+            return unless (instance = @hash[:scope_level_resource])
+
+            name = [*@hash[:module], instance.singular].join('/')
+            controller = [*@hash[:module], controller].join('/')
+
+            resource = annotation(:admin_application).fetch_resource(name)
+            resource.enhance_from_route(self, action.to_s)
+            resource.assign_handler(controller, instance.singleton?)
+          end
       end
 
-      def initialize(set, admin_application)
+      def initialize(set)
         super(set)
         @scope = Scope.new(path_names: @set.resources_path_names)
-        @admin_application = admin_application
       end
 
       include Scoping
