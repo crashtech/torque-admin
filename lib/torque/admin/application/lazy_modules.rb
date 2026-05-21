@@ -5,15 +5,16 @@ module Torque
     class Application
       module LazyModules
         MODULES = {
-          Resource: :fetch_resource_class,
+          Resource: :build_resource_class,
 
-          BaseController: :fetch_base_controller,
+          BaseController: :build_base_controller,
           ResourceController: [:build_controller, 'Torque::Admin::ResourceController'],
           DashboardController: [:build_controller, 'Torque::Admin::DashboardController'],
+          SimpleController: :build_simple_controller,
         }.freeze
 
         class << self
-          def fetch_base_controller(mod)
+          def build_base_controller(mod)
             klass = Class.new(mod.admin_application.config.base_controller!.constantize)
             klass.define_singleton_method(:admin_application, &mod.method(:admin_application))
             klass.include(Admin::BaseController)
@@ -28,7 +29,13 @@ module Torque
             klass
           end
 
-          def fetch_resource_class(mod)
+          def build_simple_controller(mod)
+            klass = Class.new(mod.const_get(:ResourceController))
+            klass.include(SimpleController)
+            klass
+          end
+
+          def build_resource_class(mod)
             Class.new(Resource)
           end
         end

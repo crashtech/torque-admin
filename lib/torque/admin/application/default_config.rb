@@ -21,6 +21,13 @@ module Torque
         # +Object+, which means at the top level.
         parent_module: 'Object',
 
+        # Whether the admin application stream heavy actions (like index) by default. By default, it is set to +true+.
+        stream_actions: true,
+
+        # The method to use for parallel processing of heavy actions. The default options are: concurrent_ruby,
+        # async, or false to disable parallel processing. By default, it is set to +concurrent_ruby+.
+        parallel_processing_with: :concurrent_ruby,
+
         # Whether the admin application should be defined as an isolated namespace. There are 3 possible options: false
         # will define the admin application in the parent module without isolation, true will define it as a fully Rails
         # isolated namespace and application, and nil will define a hybrid approach where the admin application will

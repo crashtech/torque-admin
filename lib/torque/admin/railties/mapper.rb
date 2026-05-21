@@ -24,28 +24,30 @@ module Torque
       end
 
       module Scoping
-        def unauthenticated(&block)
-          annotate(authenticated: false, &block)
+        def section(name, &)
+          scope(path: name, as: name, annotations: { section: name }, &)
         end
 
-        def with_actions(*actions, &block)
-          scope(add_actions: actions.map(&:to_sym), &block)
+        def with_actions(*actions, &)
+          scope(add_actions: actions.map(&:to_sym), &)
         end
 
-        def section(name, &block)
-          scope(path: name, as: name, annotations: { section: name }, &block)
+        def without_actions(*actions, &)
+          scope(except: actions.map(&:to_sym), &)
         end
 
-        def without_actions(*actions, &block)
-          scope(except: actions.map(&:to_sym), &block)
+        def simple(&)
+          with_scope_level(:simple, &)
         end
 
-        def simple(&block)
-          with_scope_level(:simple, &block)
+        def annotate(annotations, &)
+          scope(annotations: annotations, &)
         end
 
-        def annotate(annotations, &block)
-          scope(annotations: annotations, &block)
+        def external(&)
+          mapper = ActionDispatch::Routing::Mapper.new(@set)
+          frame = @scope.frame.except(:annotations, :blocks, :options)
+          mapper.with_default_scope(frame, &)
         end
 
         private
@@ -274,13 +276,31 @@ module Torque
       end
 
       module Authentication
-        PROVIDERS = %i[rails devise]
+        PROVIDERS = %i[rails custom devise]
 
-        def authenticate(resource, with:, **options, &block)
-          raise ArgumentError, "unsupported authentication provider: #{with}" unless PROVIDERS.include?(with)
-
-          send("authenticate_with_#{with}", resource, **options, &block)
+        def unauthenticated(&)
+          annotate(authenticated: false, &)
         end
+
+        def authenticate(resource, with:, **, &block)
+          raise ArgumentError, "unsupported authentication provider: #{with}" unless PROVIDERS.include?(with)
+          raise ArgumentError, "#{with} authentication requires a block" if %i[rails custom].include?(with) && block.nil?
+
+          admin = @scope.annotation(:admin_application)
+          admin.authenticable_resource!(resource, with)
+
+          annotate(resource: admin.fetch_resource(resource), authenticated: false) do
+            return external(&block) if block_given?
+
+            send("authenticate_with_#{with}", resource, admin, **)
+          end
+        end
+
+        private
+
+          def authenticate_with_devise(resource, admin, **)
+            external { devise_for(resource, module: "#{admin.mod.name.underscore}/devise", **) }
+          end
       end
 
       class Scope < ActionDispatch::Routing::Mapper::Scope
@@ -293,10 +313,8 @@ module Torque
         def annotate!(controller, action, params)
           return unless (notes = @hash[:annotations])
 
-          resource = annotate_resource(controller, action)
-
           data = notes.slice(:section, :authenticated)
-          data[:resource] = resource if resource
+          data[:resource] ||= annotate_resource(controller, action)
           data[:type] = annotation(:type) || scope_level
 
           params[:options] = params[:options].merge(annotations: data)
@@ -339,7 +357,7 @@ module Torque
 
             resource = annotation(:admin_application).fetch_resource(name)
             resource.enhance_from_route(self, action.to_s)
-            resource.assign_handler(controller, instance.singleton?)
+            resource.assign_handler(controller, instance.singleton?, instance.param)
           end
       end
 

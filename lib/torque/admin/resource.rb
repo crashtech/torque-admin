@@ -11,13 +11,14 @@ module Torque
       delegate :controller_class, to: :primary_handler
 
       class Handler < SimpleDelegator
-        attr_reader :controller
+        attr_reader :controller, :param
 
-        def initialize(obj, controller, singleton)
+        def initialize(obj, controller, singleton, param)
           super(obj)
 
           @controller = controller
           @singleton = singleton
+          @param = param
         end
 
         def controller_class
@@ -63,10 +64,22 @@ module Torque
         end
       end
 
-      def assign_handler(controller, singleton)
-        @handlers[controller] ||= Handler.new(self, controller, singleton).tap do |handler|
+      def assign_handler(controller, ...)
+        @handlers[controller] ||= Handler.new(self, controller, ...).tap do |handler|
           @primary_handler ||= handler
         end
+      end
+
+      def resource_class
+        @resource_class ||= name.classify.constantize
+      end
+
+      def singular
+         resource_class.respond_to?(:model_name) ? resource_class.model_name.singular : name.split('/').last.singularize
+      end
+
+      def plural
+         resource_class.respond_to?(:model_name) ? resource_class.model_name.plural : name.split('/').last.pluralize
       end
 
       def inspect

@@ -20,7 +20,7 @@ module Torque
       end
 
       class_methods do
-        delegate :config, to: :admin_application, prefix: true
+        delegate :config, to: :admin_application, prefix: :admin
 
         def ui_framework
           admin_application.ui_builder.framework_name
@@ -45,6 +45,18 @@ module Torque
         def main_menu(**, &)
           element(:main_menu, of_type: :menu, detect_current: true, **, &)
         end
+
+        protected
+
+          def generated_handlers_module
+            @generated_handlers_module ||= begin
+              mod = Module.new
+              const_set(:GeneratedHandlers, mod)
+              private_constant :GeneratedHandlers
+              include(mod)
+              mod
+            end
+          end
       end
 
       def elements_i18n_keys_for(*)
@@ -55,6 +67,16 @@ module Torque
           '%<name>s.%<id>s',
         ]
       end
+
+      protected
+
+        def route_annotations
+          @route_annotations ||= request.get_header('action_dispatch.route').scope_options[:annotations] || {}
+        end
+
+        def route_annotation(key)
+          route_annotations[key.to_sym]
+        end
     end
   end
 end

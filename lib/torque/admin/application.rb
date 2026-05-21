@@ -7,7 +7,7 @@ module Torque
   module Admin
     # = Torque Admin \Application
     class Application
-      attr_reader :name, :config, :engine, :mod
+      attr_reader :name, :config, :engine, :mod, :auth_resources
 
       delegate :title, to: :config
 
@@ -19,8 +19,7 @@ module Torque
         @engine = Admin::Engine.build(self)
         @mod = setup_application_module
 
-        @resources = {}
-
+        clear
         setup_additional_config
       end
 
@@ -47,8 +46,10 @@ module Torque
 
       def clear
         @resources = {}
+        @auth_resources = {}
         @ui_builder = nil
         @base_controller = nil
+        @engine.mounted = false
         LazyModules::MODULES.each_key do |mod_name|
           mod.send(:remove_const, mod_name) if mod.constants.include?(mod_name)
         end
@@ -66,8 +67,12 @@ module Torque
         @resources[name] ||= mod::Resource.new(name)
       end
 
-      def fetch_resource_for(controller)
-        mod::Resource.mapping_for(controller)
+      def authenticable_resource!(name, type)
+        raise ArgumentError, <<~MSG if @auth_resources.key?(name.to_sym)
+          Resource #{name} is already configured for authentication.
+        MSG
+
+        @auth_resources[name.to_sym] = type
       end
 
       def inspect
@@ -89,7 +94,7 @@ module Torque
             authenticated: @config.default_authenticated,
           }
 
-          ActiveSupport::Reloader.to_prepare(&method(:clear))
+          ActiveSupport::Reloader.before_class_unload(&method(:clear))
         end
 
         def ui_theme
