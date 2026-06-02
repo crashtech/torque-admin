@@ -55,6 +55,11 @@ module Torque
         end
       end
 
+      def finalize_routes!
+        @_controllers = nil
+        auto_dashboard_route
+      end
+
       def auto_dashboard_route(routes = engine.routes)
         Mapper.new(routes).with_default_scope(routes.default_scope) { dashboard_root }
       end
@@ -65,6 +70,15 @@ module Torque
 
       def fetch_resource(name)
         @resources[name] ||= mod::Resource.new(name)
+      end
+
+      def setup_controller(controller, resource, param)
+        return unless (@_controllers ||= Set.new).add?(controller)
+
+        Rails.autoloaders.main.on_load(controller) do |klass, *|
+          klass.const_set(:RESOURCE, resource)
+          klass.const_set(:RESOURCE_PARAM, param)
+        end
       end
 
       def authenticable_resource!(name, type)

@@ -8,29 +8,20 @@ module Torque
       Key = :"torque@async"
 
       included do
+        class_attribute(:stream_actions, instance_writer: false, default: [].freeze)
         alias_method(:process_sync, :process)
         include(ActionController::Live)
         alias_method(:process_async, :process)
-        alias_method(:process, :direct_process)
+        alias_method(:process, :process_properly)
       end
 
       class_methods do
-        def stream_actions(*actions)
-          @async_actions = async_actions + actions.map { |action| action.to_s.freeze }
-        end
-
-        def async_actions
-          return @async_actions if defined?(@async_actions)
-
-          superclass.respond_to?(:async_actions) ? superclass.async_actions : [].freeze
-        end
-
-        def async_action?(action)
-          async_actions.include?(action)
+        def stream_from_actions(*actions)
+          self.stream_actions += actions.flatten.map(&:to_s)
         end
       end
 
-      def direct_process(action, ...)
+      def process_properly(action, ...)
         if async_action?(action)
           process_async(action, ...)
         else
@@ -46,14 +37,15 @@ module Torque
           super
         ensure
           wait_all_async_processes!
-          response.stream.close
+          Thread.current[Key] = nil
+          response.stream.close unless response.stream.closed?
         end
       end
 
       protected
 
-        def async_action?(name = action_name)
-          self.class.async_action?(name)
+        def async_action?(name = nil)
+          (name.nil? && !Thread.current[Key].nil?) || stream_actions.include?((name || action_name).to_s)
         end
 
         def wait_all_async_processes!
@@ -66,7 +58,6 @@ module Torque
               error ? process.cancel : process.wait
             when :concurrent_ruby
               error ? process.cancel : process.wait!
-            else raise "Unknown parallel processing method: #{processor.inspect}"
             end
           rescue Exception => e
             error ||= e
@@ -74,14 +65,13 @@ module Torque
 
           Thread.current[Key].clear
           raise error if error
-          # TODO: Add support for web console making turbo to render it as a new page
+          # TODO: Add support for web console and better errors, guiding turbo to render it as a new page
         end
 
         def initialize_async_process(&)
           return yield unless (processor = admin_config.parallel_processing_with)
 
-          list = Thread.current[Key]
-          raise +"Async processes cannot be started outside of an async action" unless list
+          raise +"Async processes cannot be started outside of an async action" if (list = Thread.current[Key]).nil?
 
           list <<
             case processor

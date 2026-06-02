@@ -29,7 +29,7 @@ module Torque
         end
 
         def with_actions(*actions, &)
-          scope(add_actions: actions.map(&:to_sym), &)
+          scope(additional_actions: actions.map(&:to_sym), &)
         end
 
         def without_actions(*actions, &)
@@ -56,7 +56,11 @@ module Torque
             merge_options_scope(parent, child)
           end
 
-          def merge_add_actions_scope(parent, child)
+          def merge_nested_resources_scope(parent, child)
+            merge_options_scope(parent, child) unless child.nil?
+          end
+
+          def merge_additional_actions_scope(parent, child)
             parent ? parent + child : child
           end
       end
@@ -77,12 +81,16 @@ module Torque
             @singular = source&.to_s&.underscore
           end
 
+          def simple?
+            @simple
+          end
+
           def default_actions
             AdminResource.default_actions(singleton?)
           end
 
           def resource_scope
-            @simple ? 'simple_resource' : controller
+            simple? ? 'simple_resource' : controller
           end
 
           def actions_scope
@@ -171,6 +179,17 @@ module Torque
             (resource_method_scope? && action == :upsert) || super
           end
 
+          def shallow_scope(*)
+            scope(nested_resources: nil) { super }
+          end
+
+          def resource_scope(*)
+            return super if (parent = parent_resource).nil?
+
+            controller = -[*@scope[:module], parent.controller].join('/')
+            scope(nested_resources: { parent.nested_param => controller }) { super }
+          end
+
           def action_path(name)
             if %i[new edit].include?(name.to_sym) && @scope.resource_method_scope?
               "#{super}(/:partial)"
@@ -202,15 +221,19 @@ module Torque
 
             widgets(*widgets) if widgets
 
-            new { get(:new) } if set.include?(:new)
+            new { annotate(type: :action) { get(:new) } } if set.include?(:new)
 
             member do
               action(*actions, add_alias: true) if actions
-              delete(:destroy) if set.include?(:destroy)
 
-              get(:preview) if set.include?(:preview)
-              get(:edit) if set.include?(:edit)
-              get(:show) if set.include?(:show)
+              annotate(type: :action) do
+                delete(:destroy) if set.include?(:destroy)
+
+                get(:preview) if set.include?(:preview)
+                get(:edit) if set.include?(:edit)
+                get(:show) if set.include?(:show)
+              end
+
               patch(:update).put(:update) if set.include?(:update)
             end
 
@@ -229,7 +252,7 @@ module Torque
               patch(:upsert).put(:upsert) if set.include?(:upsert)
             end
 
-            new { get(:new) } if set.include?(:new)
+            new { annotate(type: :action) { get(:new) } } if set.include?(:new)
 
             actions do
               action(*actions, add_alias: true) if actions
@@ -237,9 +260,11 @@ module Torque
             end
 
             member do
-              get(:preview) if set.include?(:preview)
-              get(:edit) if set.include?(:edit)
-              get(:show) if set.include?(:show)
+              annotate(type: :action) do
+                get(:preview) if set.include?(:preview)
+                get(:edit) if set.include?(:edit)
+                get(:show) if set.include?(:show)
+              end
               patch(:update).put(:update) if set.include?(:update)
             end
           end
@@ -304,7 +329,7 @@ module Torque
       end
 
       class Scope < ActionDispatch::Routing::Mapper::Scope
-        ADMIN_OPTIONS = %i[annotations add_actions].freeze
+        ADMIN_OPTIONS = %i[annotations nested_resources additional_actions].freeze
 
         def options
           ADMIN_OPTIONS + super
@@ -314,10 +339,14 @@ module Torque
           return unless (notes = @hash[:annotations])
 
           data = notes.slice(:section, :authenticated)
-          data[:resource] ||= annotate_resource(controller, action)
-          data[:type] = annotation(:type) || scope_level
+          if (instance = @hash[:scope_level_resource])
+            data[:resource] = annotate_resource(instance, controller, action)
+            data[:nesting] = @hash[:nested_resources]
+            data[:param] = instance.param
+          end
 
-          params[:options] = params[:options].merge(annotations: data)
+          data[:type] = annotation(:type) || scope_level
+          params[:options] = params[:options].merge(annotations: data.compact)
         end
 
         def simple?
@@ -349,15 +378,18 @@ module Torque
 
         private
 
-          def annotate_resource(controller, action)
-            return unless (instance = @hash[:scope_level_resource])
+          def annotate_resource(instance, controller, action)
+            app = annotation(:admin_application)
+            name = -[*@hash[:module], instance.singular].join('/')
 
-            name = [*@hash[:module], instance.singular].join('/')
-            controller = [*@hash[:module], controller].join('/')
-
-            resource = annotation(:admin_application).fetch_resource(name)
+            resource = app.fetch_resource(name)
             resource.enhance_from_route(self, action.to_s)
-            resource.assign_handler(controller, instance.singleton?, instance.param)
+            return resource if instance.simple?
+
+            controller = [*@hash[:module], "#{controller}_controller"].join('/').classify
+            app.setup_controller(controller, resource, instance.param)
+
+            nil
           end
       end
 

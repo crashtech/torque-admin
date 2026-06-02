@@ -17,21 +17,19 @@ module Torque
           ivar = member_ivar_name
           return instance_variable_get(ivar) if instance_variable_defined?(ivar)
 
-          instance_variable_set(ivar, initialize_resource)
+          instance_variable_set(ivar, find_member!)
         end
 
         alias member resource
 
-        def initialize_resource(id = nil, by: route_annotation(:resource).param)
-          id = params[by] if id.nil?
+        def find_member!(id = params[RESOURCE_PARAM], scope: nil, by: scope.model.primary_key)
+          (scope || scoped_resource).find_sole_by(by => id)
         end
-
-        alias initialize_member initialize_resource
 
         # Internal methods
 
         def member_ivar_name
-          :"@#{route_annotation(:resource).singular}"
+          :"@#{RESOURCE.singular}"
         end
     end
   end

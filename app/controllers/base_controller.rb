@@ -77,6 +77,12 @@ module Torque
         def route_annotation(key)
           route_annotations[key.to_sym]
         end
+
+        def initialized_side_controllers
+          @initialized_side_controllers ||= Hash.new do |hash, name|
+            # TODO: Load the controller class in a slave mode
+          end
+        end
     end
   end
 end

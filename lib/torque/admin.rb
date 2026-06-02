@@ -38,9 +38,9 @@ module Torque
 
       private
 
-        def app_autoload(const_name)
+        def app_autoload(const_name, *subs)
           folder = ActiveSupport::Inflector.pluralize(const_name.to_s.match(/[A-Z][a-z]+\z/).to_s.downcase)
-          autoload(const_name, APP_DIR.join(folder, ActiveSupport::Inflector.underscore(const_name)))
+          autoload(const_name, APP_DIR.join(folder, *subs, ActiveSupport::Inflector.underscore(const_name)))
         end
     end
 
@@ -53,6 +53,11 @@ module Torque
 
       app_autoload :CollectionController
       app_autoload :MemberController
+
+      app_autoload :FilterController, 'collection'
+      app_autoload :ScopeController, 'collection'
+      app_autoload :SortController, 'collection'
+      app_autoload :PaginationController, 'collection'
 
       app_autoload :IndexController
       app_autoload :ShowController

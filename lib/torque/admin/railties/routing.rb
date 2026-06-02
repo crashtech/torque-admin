@@ -21,7 +21,7 @@ module Torque
 
           routes = app.engine.routes
           routes.clear!
-          routes.append { app.auto_dashboard_route }
+          routes.append { app.finalize_routes! }
           @set.append { routes.finalize! }
         end
     end
