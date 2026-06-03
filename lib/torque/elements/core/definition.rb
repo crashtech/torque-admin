@@ -15,12 +15,11 @@ module Torque
           define_method(state_method) { @state.include?(state_method.to_s.chomp('?')) }
         end
 
-        def initialize(name, context, *args, **options, &config)
+        def initialize(name, *args, **options, &config)
           raise NotImplementedError, +'Cannot instantiate an abstract class' if self.class.abstract_class?
 
           @name = name
           @state = Set.new
-          @context = context
           @config = config
 
           options = args.grep(Symbol).product([true]).to_h.merge(options)
@@ -31,7 +30,7 @@ module Torque
         end
 
         def clear!
-          @context = @config = @root = @state = nil
+          @config = @root = @state = nil
           super
         end
 
@@ -81,7 +80,7 @@ module Torque
           return import_nodes(other, nil) if other.is_a?(Array)
           return import_nodes([other], other) if other.is_a?(Node)
 
-          other = @context.elements[other] unless other.is_a?(Base)
+          other = Context.registry[other] unless other.is_a?(Base)
           raise ArgumentError, "Expected an element definition, got #{other.class.name}" unless other.is_a?(Base)
 
           from = other.fetch(from)
@@ -107,7 +106,7 @@ module Torque
             args = block.arity == 1 ? @interface : nil
 
             if !loading? && rendering?
-              rendered[node] = @context.capture(*args, &block)
+              rendered[node] = Context.view_context.capture(*args, &block)
             elsif args
               block.call(args)
             else

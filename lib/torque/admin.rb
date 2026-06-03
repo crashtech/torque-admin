@@ -46,7 +46,9 @@ module Torque
 
     eager_autoload do
       app_autoload :BaseController
+      app_autoload :SettingsController
       app_autoload :StreamController
+
       app_autoload :ResourceController
       app_autoload :DashboardController
       app_autoload :SimpleController
@@ -62,6 +64,7 @@ module Torque
       app_autoload :IndexController
       app_autoload :ShowController
       app_autoload :FormController
+      app_autoload :BatchController
       app_autoload :ActionsController
       app_autoload :WidgetsController
 

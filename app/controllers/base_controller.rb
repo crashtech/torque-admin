@@ -9,14 +9,22 @@ module Torque
       include Elements::Templates
       include Elements::Controller
 
-      delegate :admin_application, :admin_config, :admin_controller_name, :ui_framework, to: :class
+      include SettingsController
+
+      delegate :admin_application, :admin_application_config, :admin_controller_name, :ui_framework, to: :class
 
       included do
-        append_view_path(Admin::APP_DIR.join('views'))
-        helper(Admin::ApplicationHelper)
-        helper_method(:ui_framework)
-        layout(admin_application.name.to_s)
-        frame('classic')
+        append_view_path Admin::APP_DIR.join('views')
+        helper Admin::ApplicationHelper
+        helper_method :ui_framework
+        layout admin_application.name.to_s
+        frame 'classic'
+
+        def _protected_ivars
+          super + %i[@_initialized_side_controllers @_slave_of @_route_annotations @_chained_scoped_resource]
+        end
+
+        private :_protected_ivars
       end
 
       class_methods do
@@ -71,16 +79,28 @@ module Torque
       protected
 
         def route_annotations
-          @route_annotations ||= request.get_header('action_dispatch.route').scope_options[:annotations] || {}
+          @_route_annotations ||= request.get_header('action_dispatch.route').scope_options[:annotations] || {}
         end
 
         def route_annotation(key)
           route_annotations[key.to_sym]
         end
 
+        def slave_controller?
+          defined?(@_slave_of)
+        end
+
+        def initialize_as_slave_of(other)
+          @_request = other.instance_variable_get(:@_request)
+          @_response = other.instance_variable_get(:@_response)
+          @_slave_of = other
+        end
+
         def initialized_side_controllers
-          @initialized_side_controllers ||= Hash.new do |hash, name|
-            # TODO: Load the controller class in a slave mode
+          @_initialized_side_controllers ||= Hash.new do |hash, name|
+            hash[name] = instance = name.to_s.camelize.constantize.allocate
+            instance.send(:initialize_as_slave_of, self) if instance.respond_to?(:initialize_as_slave_of, true)
+            instance
           end
         end
     end

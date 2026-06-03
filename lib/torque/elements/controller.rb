@@ -7,8 +7,12 @@ module Torque
       extend ActiveSupport::Concern
 
       included do
-        helper_method :element_helper_name, :element_class_for, :element_class_name, :change_element, :elements_i18n_keys_for
-        delegate :element_class_name, :element_class_for, :change_element, to: :class
+        class_attribute :element_settings, instance_accessor: false, default: {}.freeze
+        class_attribute :element_aliases, instance_accessor: false, default: {}.freeze
+        private :element_settings=, :element_aliases=
+
+        helper_method :element_helper_name, :element_class_for, :element_class_name, :elements_i18n_keys_for
+        delegate :element_class_name, :element_class_for, to: :class
       end
 
       class_methods do
@@ -17,7 +21,7 @@ module Torque
         def element(name, of_type:, **, &config)
           raise ArgumentError, +'A config block must be provided' unless block_given?
 
-          name = name.underscore.to_sym if name.is_a?(::String)
+          name = sanitized_element_name(name)
           change_element(name, **)
 
           (@elements ||= {})[name] = [name, of_type, config]
@@ -26,8 +30,14 @@ module Torque
         def change_element(name, options = nil)
           return unless options
 
-          name = name.underscore.to_sym if name.is_a?(::String)
-          element_settings[name] = inherited_element_settings(name).merge!(options)
+          name = sanitized_element_name(name)
+          current = self.element_settings[name] ||= {}
+          self.element_settings[name] = current.merge(options).deep_freeze
+        end
+
+        def alias_element(name, *other_names)
+          values = other_names.map { |n| sanitized_element_name(n) }.product([sanitized_element_name(name)]).to_h
+          self.element_aliases = element_aliases.merge(values).freeze
         end
 
         def element_class_for(type)
@@ -44,20 +54,10 @@ module Torque
           name.safe_constantize
         end
 
-        def inherited_element_settings(name)
-          if (current = @element_settings.try(:[], name))
-            current
-          elsif superclass.respond_to?(:inherited_element_settings)
-            superclass.inherited_element_settings(name)
-          else
-            {}
-          end
-        end
+        protected
 
-        private
-
-          def element_settings
-            @element_settings ||= {}
+          def sanitized_element_name(name)
+            name.is_a?(::String) ? name.to_s.underscore.to_sym : name
           end
       end
 
@@ -67,6 +67,10 @@ module Torque
 
       def elements_i18n_keys_for(*)
         ['%<name>s.%<type>s.%<id>s', '%<name>s.%<id>s']
+      end
+
+      def fetch_element(name, *, **)
+        (Context.registry || Registry.new(self)).fetch(name, *, **)
       end
     end
   end

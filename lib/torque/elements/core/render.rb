@@ -7,11 +7,11 @@ module Torque
       module Render
         extend ActiveSupport::Concern
 
-        def render_in(view_context = @context, &block)
-          return with_context(view_context) { render_in(&block) } if view_context != @context
+        def render_in(view_context = Context.view_context, &)
+          return Context.with(view_context: view_context) { render_in(&) } if view_context != Context.view_context
 
           @state << 'rendering' << 'rendered'
-          block_given? ? load(&block) : load_config!
+          block_given? ? load(&) : load_config!
           render_node(root)
         ensure
           @state.delete('rendering')
@@ -37,13 +37,6 @@ module Torque
 
         private
 
-          def with_context(context)
-            old_context, @context = @context, context
-            yield
-          ensure
-            @context = old_context
-          end
-
           def render_traverse(node)
             return if node.leaf?
 
@@ -68,11 +61,11 @@ module Torque
           def render_method(node)
             (@render_method ||= {})[node.type] ||= begin
               source, *args = find_render_method_for(node)
-              source&.public_send(*args) || @context.method(name)
+              source&.public_send(*args) || Context.view_context.method(name)
             end
           end
 
-          def find_render_method_for(node, base: @context)
+          def find_render_method_for(node, base: Context.view_context)
             name = base.element_helper_name(self, node)
             return [base, :method, name] if base.respond_to?(name)
             return unless base.respond_to?(:ui)

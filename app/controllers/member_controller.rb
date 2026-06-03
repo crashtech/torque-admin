@@ -6,7 +6,7 @@ module Torque
       extend ActiveSupport::Concern
 
       included do
-        helper_method(:resource, :member)
+        helper_method :resource, :member
       end
 
       protected

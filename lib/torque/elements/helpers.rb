@@ -33,7 +33,7 @@ module Torque
       end
 
       def elements
-        Context.elements || Registry.new(self)
+        Context.registry || Registry.new(controller)
       end
 
       def _run_under(buffer, template)
@@ -50,7 +50,7 @@ module Torque
 
         def with_elements_context(**extra)
           extra[:view_context] = self
-          extra[:elements] = Registry.new(self)
+          extra[:registry] = Registry.new(controller)
 
           Context.with(**extra) do
             yield

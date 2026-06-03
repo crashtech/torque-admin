@@ -6,31 +6,29 @@ module Torque
 
     # = Torque Elements \Registry
     class Registry
-      def initialize(context)
-        @context = context
-        @controller = context.controller
-        @instances = {}
+      def initialize(controller)
+        @controller = controller
       end
 
       def new(type, name = nil, *, **, &)
         klass = @controller.element_class_for(type)
-        instance = klass.new(name, @context, *, **)
+        instance = klass.new(name, *, **)
 
-        return instance.render_in(@context, &) if block_given?
+        return instance.render_in(&) if block_given?
         raise ::ArgumentError, +'Expected a block for inlined element' if name.nil?
 
-        @instances[name] ||= instance
+        instances[name] ||= instance
       end
 
       def store(name, type, *, **, &)
         klass = @controller.element_class_for(type)
-        @instances[name] = klass.new(name, @context, *, **, &)
+        instances[name] = klass.new(name, *, **, &)
       end
 
       def fetch(name, *, **kwargs)
-        @instances[name] || begin
+        instances[name] || begin
           name, type, config = fetch_from_controller(name)
-          options = @controller.class.inherited_element_settings(name).merge(kwargs)
+          options = @controller.class.element_settings[name]&.merge(kwargs) || kwargs
           store(name, type, *, **options, &config)
         end
       end
@@ -38,13 +36,13 @@ module Torque
       alias [] fetch
 
       def respond_to?(name)
-        @instances.key?(name) || fetch_from_controller(name)
+        instances.key?(name) || fetch_from_controller(name)
       rescue NotFound
         false
       end
 
       def rendered?(name)
-        !!@instances[name]&.rendered?
+        !!instances[name]&.rendered?
       end
 
       def respond_to_missing?(name, *)
@@ -66,7 +64,7 @@ module Torque
         name, mandatory = name[0..-2], true if name.end_with?('!')
         instance = fetch(name, *, **)
 
-        block_given? ? instance.render_in(@context, &) : instance
+        block_given? ? instance.render_in(&) : instance
       rescue NotFound => e
         raise(e) if mandatory
 
@@ -75,18 +73,27 @@ module Torque
       end
 
       def inspect
-        "#<#{Registry} for #{@controller.class.name} @instances=#{@instances.keys}>"
+        "#<#{Registry} for #{@controller.class.name} @instances=#{instances.keys}>"
       end
 
       protected
+
+        def instances
+          Context.elements ||= {}
+        end
 
         def fetch_from_controller(name)
           name = name.underscore.to_sym if name.is_a?(String)
 
           current = @controller.class
           while current < Controller
-            entry = current.elements&.fetch(name, nil)
+            entry = current.elements&.[](name)
             return entry if entry
+
+            if (orig_name = current.element_aliases[name])
+              entry = current.elements&.[](orig_name)
+              return entry if entry
+            end
 
             current = current.superclass
           end

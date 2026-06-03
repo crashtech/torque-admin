@@ -6,6 +6,7 @@ module Torque
     class Context < ActiveSupport::CurrentAttributes
       attribute :view_context
       attribute :elements
+      attribute :registry
       attribute :refs, default: {}
 
       before_reset { elements&.clear! }

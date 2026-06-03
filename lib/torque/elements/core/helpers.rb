@@ -69,7 +69,7 @@ module Torque
           end
 
           def i18n_keys
-            @i18n_keys ||= @context.elements_i18n_keys_for(self)
+            @i18n_keys ||= Context.view_context.elements_i18n_keys_for(self)
           end
 
           def text_attributes

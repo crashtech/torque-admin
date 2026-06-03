@@ -8,16 +8,18 @@ module Torque
       Key = :"torque@async"
 
       included do
-        class_attribute(:stream_actions, instance_writer: false, default: [].freeze)
-        alias_method(:process_sync, :process)
-        include(ActionController::Live)
-        alias_method(:process_async, :process)
-        alias_method(:process, :process_properly)
+        class_attribute :stream_actions, instance_writer: false, default: [].freeze
+
+        alias_method :process_sync, :process
+        include ActionController::Live
+        alias_method :process_async, :process
+        alias_method :process, :process_properly
       end
 
       class_methods do
         def stream_from_actions(*actions)
           self.stream_actions += actions.flatten.map(&:to_s)
+          self.stream_actions.freeze
         end
       end
 
@@ -41,6 +43,9 @@ module Torque
           response.stream.close unless response.stream.closed?
         end
       end
+
+      # TODO: When we are in sream mode, render and default render responses need to be adapted/overload, attempting to
+      # keep the same interface but not closing the stream and properly handling subsequent render calls.
 
       protected
 

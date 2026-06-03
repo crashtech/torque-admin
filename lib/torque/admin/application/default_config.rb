@@ -54,6 +54,15 @@ module Torque
         # The modules to search for elements (lookup will happen in reverse order, so the last module will be searched
         # first). By default, it is set to +Object+ and +Torque::Admin+.
         elements_lookup_context: ['Object', 'Torque::Admin'],
+
+        ## Behaviors Section
+
+        # All specific configuration for handling resources in the admin application.
+        resources: config.new(
+          # Indicates whether the admin application should use strict loading for resources by default. By default, it
+          # is set to +false+, as a common situation
+          default_strict_loading: false,
+        ),
       ).freeze
     end
   end

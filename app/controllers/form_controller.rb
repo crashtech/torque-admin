@@ -5,30 +5,40 @@ module Torque
     module FormController
       extend ActiveSupport::Concern
 
+      attr_reader :form_element
+
       included do
-        helper_method(:form_record)
+        helper_method :form_record, :form_element
       end
+
+      # TODO: Here we can setup a form element for a given action. This will simple coordinate prepare the underlying
+      # action to have a properly loaded form element and allow an inline setup of a Torque Form with some sparkling
+      # additions from the Admin Resource information
 
       protected
 
         ## External methods
 
         def form_record
-          return build_record unless respond_to?(:resource)
-
-          param.key?(route_annotation(:resource).param) ? resource : build_record
-        end
-
-        def build_record
-          ivar = :"@#{route_annotation(:resource).singular}"
+          ivar = try(:member_ivar_name) || :"@#{RESOURCE.singular}"
           return instance_variable_get(ivar) if instance_variable_defined?(ivar)
 
-          instance_variable_set(ivar, initialize_record)
+          instance_variable_set(ivar, initialize_form_record)
+        end
+
+        def initialize_form_record
+          params.key?(RESOURCE_PARAM) ? find_member! : build_new_record
         end
 
         # Internal methods
 
-        def initialize_record
+        def initialize_form(name = nil, **)
+          fetch_element(name || :"#{action_name}_form", values: params, **)
+        end
+
+        def build_new_record(scope: nil, using: nil, attributes: nil)
+          using ||= route_annotation(:nesting).nil? ? :new : :build
+          (scope || scoped_resource).public_send(using, attributes)
         end
     end
   end
