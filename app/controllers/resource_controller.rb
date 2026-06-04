@@ -5,17 +5,22 @@ module Torque
     module ResourceController
       extend ActiveSupport::Concern
 
+      delegate :resource_class, to: :admin_resource, prefix: :admin
+
       included do
+        class_attribute :admin_resource, instance_writer: false
+        class_attribute :primary_param, instance_accessor: false, instance_predicate: false, default: :id
+        class_attribute :identified_by, instance_accessor: false, instance_predicate: false
+
         append_template_path Rails.root.join('app', 'templates', admin_application.name.to_s, 'resource')
         append_template_path Rails.root.join('app', 'templates', 'resource')
         append_template_path Admin::APP_DIR.join('templates', 'resource')
 
         stream_from_actions :index, :show if admin_application.config.stream_actions
 
-        alias_element :primary_form, :new_form, :create_form, :edit_form, :update_form
-        alias_element :search_form, :index_form
+        before_action :load_resource, if: :processing_member_action?
 
-        before_action :eager_load_resource
+        authorize_actions! skip_if_none: true
       end
 
       include StreamController
@@ -32,8 +37,12 @@ module Torque
 
       protected
 
-        def eager_load_resource
-          params.key?(RESOURCE_PARAM) ? resource : scoped_resource
+        def processing_member_action?
+          params.key?(self.class.primary_param)
+        end
+
+        def authorizable_resource
+          processing_member_action? ? resource : scoped_resource
         end
 
         def scoped_resource
@@ -41,7 +50,7 @@ module Torque
         end
 
         def default_scoped_resource
-          RESOURCE.resource_class.default_scoped
+          admin_resource_class.default_scoped
         end
 
         def chained_scoped_resource(chain)
@@ -62,16 +71,20 @@ module Torque
           end
         end
 
-        def nested_scope_from(foreign_member, reflection: nil, macro: :belongs_to)
-          reflection ||= RESOURCE.resource_class.reflect_on_all_associations.find do |reflection|
-            reflection.klass == foreign_member.class && (macro.nil? || reflection.macro == macro)
+        def nested_scope_from(foreign_member, reflection: nil, belongs_to_only: true)
+          reflection ||= admin_resource_class.reflect_on_all_associations.find do |reflection|
+            reflection.klass == foreign_member.class && (!belongs_to_only || reflection.belongs_to?)
           end&.name
 
           raise <<~MSG unless reflection
-            Unable to find a reflection for #{foreign_member.class} within #{RESOURCE.resource_class}
+            Unable to find a reflection for #{foreign_member.class} within #{admin_resource_class}
           MSG
 
           foreign_member.public_send(reflection)
+        end
+
+        def fallback_authorization_action
+          (request.get? && (processing_member_action? && :show || :index)) || super
         end
     end
   end

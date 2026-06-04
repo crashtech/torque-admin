@@ -7,12 +7,13 @@ module Torque
 
       protected
 
-        def load_collection(scope, filter: default_filter_settings, **)
-          scope = filter_collection(scope, filter) if filter
-          super(scope, **)
+        def load_collection(s, state, filter: default_filter_settings, **)
+          s = filter_collection(s, state, filter) if filter
+          super(s, state, **)
         end
 
-        def filter_collection(scope, settings)
+        def filter_collection(scope, state, settings)
+          scope
         end
 
         def default_filter_settings

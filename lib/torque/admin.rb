@@ -16,6 +16,8 @@ module Torque
     autoload :Engine
     autoload :Resource
 
+    autoload :CollectionState
+
     # = Torque Admin \Themes
     module Themes
       extend ActiveSupport::Autoload
@@ -55,6 +57,10 @@ module Torque
 
       app_autoload :CollectionController
       app_autoload :MemberController
+
+      app_autoload :CancancanController, 'authorization'
+      app_autoload :PunditController, 'authorization'
+      app_autoload :AuthorizationController, 'authorization'
 
       app_autoload :FilterController, 'collection'
       app_autoload :ScopeController, 'collection'

@@ -8,12 +8,23 @@ module Torque
       Key = :"torque@async"
 
       included do
-        class_attribute :stream_actions, instance_writer: false, default: [].freeze
+        class_attribute :stream_actions, instance_writer: false, instance_predicate: false, default: [].freeze
+        private_class_method :stream_actions=
 
         alias_method :process_sync, :process
         include ActionController::Live
         alias_method :process_async, :process
-        alias_method :process, :process_properly
+        alias_method :process, :route_processing
+
+        helper_method :process_action_async?, :initialize_async_process
+
+        # Write to the response instead of assigning the body and closing the stream. Content is expected to change with
+        # subsequent writes with Turbo-based content updates
+        def response_body=(body)
+          return super unless process_action_async?
+
+          response.stream.writeln(body)
+        end
       end
 
       class_methods do
@@ -21,40 +32,39 @@ module Torque
           self.stream_actions += actions.flatten.map(&:to_s)
           self.stream_actions.freeze
         end
-      end
 
-      def process_properly(action, ...)
-        if async_action?(action)
-          process_async(action, ...)
-        else
-          process_sync(action, ...)
+        def remove_actions_from_stream(*actions)
+          self.stream_actions -= actions.flatten.map(&:to_s)
+          self.stream_actions.freeze
         end
       end
 
+      def route_processing(action, ...)
+        process_action_async?(action) ? process_async(action, ...) : process_sync(action, ...)
+      end
+
       def process_action(...)
-        return super unless async_action?
+        return super unless process_action_async?
 
         begin
+          response.stream.ignore_disconnect = true
           Thread.current[Key] = []
           super
         ensure
           wait_all_async_processes!
           Thread.current[Key] = nil
-          response.stream.close unless response.stream.closed?
+          response.close unless response.stream.closed?
         end
       end
 
-      # TODO: When we are in sream mode, render and default render responses need to be adapted/overload, attempting to
-      # keep the same interface but not closing the stream and properly handling subsequent render calls.
-
       protected
 
-        def async_action?(name = nil)
+        def process_action_async?(name = nil)
           (name.nil? && !Thread.current[Key].nil?) || stream_actions.include?((name || action_name).to_s)
         end
 
         def wait_all_async_processes!
-          return yield unless (processor = admin_config.parallel_processing_with)
+          return yield unless (processor = admin_application_config.parallel_processing_with)
 
           error = nil
           Thread.current[Key].each do |process|
@@ -74,7 +84,7 @@ module Torque
         end
 
         def initialize_async_process(&)
-          return yield unless (processor = admin_config.parallel_processing_with)
+          return yield unless (processor = admin_application_config.parallel_processing_with)
 
           raise +"Async processes cannot be started outside of an async action" if (list = Thread.current[Key]).nil?
 

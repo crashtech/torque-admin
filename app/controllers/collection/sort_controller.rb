@@ -7,12 +7,12 @@ module Torque
 
       protected
 
-        def load_collection(scope, sort: default_sort_settings, **)
-          scope = sort_collection(scope, sort) if sort
-          super(scope, **)
+        def load_collection(s, state, sort: default_sort_settings, **)
+          sort ? sort_collection(s, state, paginate) : s
         end
 
-        def sort_collection(scope, settings)
+        def sort_collection(scope, state, settings)
+          scope
         end
 
         def default_sort_settings

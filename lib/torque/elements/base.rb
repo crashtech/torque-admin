@@ -23,6 +23,8 @@ module Torque
       include Core::Helpers
       include Core::Definition
 
+      delegate :view_context, to: '::Torque::Elements::Context'
+
       class_attribute :abstract_class, instance_accessor: false, instance_predicate: false
       self.abstract_class = true
 

@@ -13,7 +13,7 @@ module Torque
         end.with_indifferent_access.freeze
         ITEMS = %w[zero one two three four five six seven eight nine ten eleven twelve].each_with_index.to_h.invert
 
-        shared(:icon) { |b| b.calls(:icon).adds_to_content(:before) }
+        shared(:icon) { |b| b.calls(:icon).adds_to_content(:prepend) }
         shared(:size) { |b| b.maps_using(:SIZES).assigns(:class) }
         shared(:color) { |b| b.assigns(:class) }
         shared(:items) { |b| b.maps_using(:ITEMS).formats(:class, '%s item') }

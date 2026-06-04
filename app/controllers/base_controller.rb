@@ -14,21 +14,30 @@ module Torque
       delegate :admin_application, :admin_application_config, :admin_controller_name, :ui_framework, to: :class
 
       included do
+        mod = module_parents.find { |mod| break mod if mod.respond_to?(:admin_application) }
+        raise +"Unable to determine the admin application" unless mod
+
+        define_singleton_method(:admin_application, &mod.method(:admin_application))
         append_view_path Admin::APP_DIR.join('views')
         helper Admin::ApplicationHelper
-        helper_method :ui_framework
+        helper_method :ui_framework, :relative_path_for, :relative_url_for
         layout admin_application.name.to_s
         frame 'classic'
 
         def _protected_ivars
-          super + %i[@_initialized_side_controllers @_slave_of @_route_annotations @_chained_scoped_resource]
+          super + %i[
+            @_initialized_side_controllers @_slave_of @_route_annotations
+            @_chained_scoped_resource
+          ]
         end
 
         private :_protected_ivars
       end
 
       class_methods do
-        delegate :config, to: :admin_application, prefix: :admin
+        def admin_application_config
+          admin_application.config
+        end
 
         def ui_framework
           admin_application.ui_builder.framework_name
@@ -55,6 +64,15 @@ module Torque
         end
 
         protected
+
+          def authorize_actions!(skip_if_none: false, only: nil, except: nil)
+            if (adapter = admin_application.authorization_adapter)
+              include(Admin.const_get("#{adapter}Controller"))
+              skip_before_action(:authorize_action!, only: except, except: only) if only || except
+            elsif !skip_if_none
+              raise +"No authorization adapter configured for #{admin_application.name} application"
+            end
+          end
 
           def generated_handlers_module
             @generated_handlers_module ||= begin
@@ -86,6 +104,10 @@ module Torque
           route_annotations[key.to_sym]
         end
 
+        def authentication_protected_route?
+          route_annotation(:authenticated).present?
+        end
+
         def slave_controller?
           defined?(@_slave_of)
         end
@@ -101,6 +123,23 @@ module Torque
             hash[name] = instance = name.to_s.camelize.constantize.allocate
             instance.send(:initialize_as_slave_of, self) if instance.respond_to?(:initialize_as_slave_of, true)
             instance
+          end
+        end
+
+        def relative_path_for(action)
+          url_for(action:, only_path: true)
+        end
+
+        def relative_url_for(action)
+          url_for(action:)
+        end
+
+        def fallback_authorization_action
+          case request.method
+          when 'GET'          then :read
+          when 'POST'         then :create
+          when 'PATCH', 'PUT' then :update
+          when 'DELETE'       then :destroy
           end
         end
     end

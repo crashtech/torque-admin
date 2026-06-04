@@ -8,8 +8,8 @@ module Torque
       # TODO: I'm still not fully convinced that I will need this
 
       included do
-        class_attribute :settings_for_actions, instance_accessor: false, default: {}.freeze
-        private :settings_for_actions, :settings_for_actions=
+        class_attribute :settings_for_actions, instance_accessor: false, instance_predicate: false, default: {}.freeze
+        private_class_method :settings_for_actions, :settings_for_actions=
 
         helper_method :action_settings
       end

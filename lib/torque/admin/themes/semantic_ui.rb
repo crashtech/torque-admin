@@ -53,7 +53,7 @@ module Torque
           return (as_link ? super(label, **kwargs) : menu_header(label, **kwargs)) if content.nil?
 
           submenu = submenu(content, **kwargs.delete(:submenu))
-          append_options(kwargs, class: { header: false }, after: submenu)
+          append_options(kwargs, class: { header: false }, append: submenu)
 
           return menu_header(label, dropdown: true, **kwargs) unless as_link
 

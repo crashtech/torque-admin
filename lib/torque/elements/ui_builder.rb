@@ -165,7 +165,7 @@ module Torque
 
       def render_tag(tag_name, options = {}, with_content: false)
         options = collapse_options(options)
-        left, *inner, right = options.delete('@content')&.values_at(:prepend, :before, :content, :after, :append)
+        left, *inner, right = options.delete('@content')&.values_at(*ContentHandler::PARTS)
         content = view_context.safe_join(inner.flatten) if with_content && inner.present?
         content = tag_builder.public_send(tag_name, *content, **options)
         return content if left.nil? && right.nil?

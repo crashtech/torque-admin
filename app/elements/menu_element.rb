@@ -36,7 +36,7 @@ module Torque
       def sanitize_node_options(node)
         return super unless node =~ :item
 
-        node[:href] = @context.url_for(node[:href]) if node[:href]
+        node[:href] = view_context.url_for(node[:href]) if node[:href]
         change_current_indicator(node) if settings[:detect_current]
         icons_helper.call(node) if settings[:icons]
         super
@@ -77,7 +77,7 @@ module Torque
       def detect_current_helper
         @detect_current_helper ||= begin
           method = TrueClass === settings[:detect_current] ? :current_page? : settings[:detect_current]
-          method.respond_to?(:call) ? method : @context.method(method)
+          method.respond_to?(:call) ? method : view_context.method(method)
         end
       end
 
@@ -88,7 +88,7 @@ module Torque
             ->(node) { node[:icon] = index[node.id] }
           else
             helper = TrueClass === settings[:icons] ? :icon : settings[:icons]
-            helper = @context.respond_to?(helper) ? @context.method(helper) : @context.ui.method(helper)
+            helper = view_context.respond_to?(helper) ? view_context.method(helper) : view_context.ui.method(helper)
             position = settings.fetch(:icon_position, :after)
             ->(node) { node.append(position => helper.call(node.id)) }
           end

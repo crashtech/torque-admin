@@ -13,6 +13,8 @@ Style/TrailingCommaInArguments:
 Style/TrailingCommaInHashLiteral:
   EnforcedStyleForMultiline: comma
 
+Style/HashSyntax:
+  EnforcedShorthandSyntax: always
 
 # To be enabled
 Style/Documentation:

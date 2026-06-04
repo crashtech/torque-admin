@@ -59,9 +59,9 @@ module Torque
 
         # All specific configuration for handling resources in the admin application.
         resources: config.new(
-          # Indicates whether the admin application should use strict loading for resources by default. By default, it
-          # is set to +false+, as a common situation
-          default_strict_loading: false,
+          # Configures the default adapter that will handle resource-based authorization in the admin application. The
+          # default options are: cancancan, pundit, torque_admin, or nil to disable
+          authorization_adapter: nil,
         ),
       ).freeze
     end

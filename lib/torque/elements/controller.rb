@@ -7,9 +7,9 @@ module Torque
       extend ActiveSupport::Concern
 
       included do
-        class_attribute :element_settings, instance_accessor: false, default: {}.freeze
-        class_attribute :element_aliases, instance_accessor: false, default: {}.freeze
-        private :element_settings=, :element_aliases=
+        class_attribute :element_settings, instance_accessor: false, instance_predicate: false, default: {}.freeze
+        class_attribute :element_aliases, instance_accessor: false, instance_predicate: false, default: {}.freeze
+        private_class_method :element_settings=, :element_aliases=
 
         helper_method :element_helper_name, :element_class_for, :element_class_name, :elements_i18n_keys_for
         delegate :element_class_name, :element_class_for, to: :class
@@ -31,8 +31,9 @@ module Torque
           return unless options
 
           name = sanitized_element_name(name)
-          current = self.element_settings[name] ||= {}
-          self.element_settings[name] = current.merge(options).deep_freeze
+          changed = element_settings.deep_merge(name => options)
+          self.element_settings = changed.freeze
+          changed[name].freeze
         end
 
         def alias_element(name, *other_names)

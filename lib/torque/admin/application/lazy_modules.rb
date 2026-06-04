@@ -16,7 +16,6 @@ module Torque
         class << self
           def build_base_controller(mod)
             klass = Class.new(mod.admin_application.config.base_controller!.constantize)
-            klass.define_singleton_method(:admin_application, &mod.method(:admin_application))
             klass.include(Admin::BaseController)
             klass.abstract!
             klass
@@ -38,10 +37,6 @@ module Torque
           def build_resource_class(mod)
             Class.new(Resource)
           end
-        end
-
-        def const_defined?(name, *)
-          MODULES.key?(name) || super
         end
 
         def const_missing(name)

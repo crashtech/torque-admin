@@ -20,7 +20,7 @@ define :menu_item do |b|
   b.preset(:header, as: 'div', class: 'header')
 
   b.toggles(:active, :link, :fitted)
-  b.property(:dropdown).applies(class: 'ui dropdown').calls(:icon, "('dropdown')").adds_to_content(:after)
+  b.property(:dropdown).applies(class: 'ui dropdown').calls(:icon, "('dropdown')").adds_to_content(:append)
   b.property(:disabled).applies(class: 'disabled', inert: true)
   b.property(:label).adds_to_content
 

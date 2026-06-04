@@ -8,13 +8,13 @@ module Torque
       include BatchController
 
       # Order here is important, as they overload the load_collection method
-      include FilterController
-      include ScopeController
       include SortController
       include PaginationController
+      include ScopeController
+      include FilterController
 
       included do
-        helper_method :collection
+        helper_method :collection, :collection_state
       end
 
       protected
@@ -25,18 +25,27 @@ module Torque
           ivar = collection_ivar_name
           return instance_variable_get(ivar) if instance_variable_defined?(ivar)
 
-          instance_variable_set(ivar, load_collection)
+          state = load_collection
+          instance_variable_set(:"#{ivar}_state", state)
+          instance_variable_set(ivar, state.collection)
         end
 
-        def load_collection(scope = nil, **settings)
+        alias_method :load_collection, :collection
+
+        def collection_state
+          ivar = :"#{collection_ivar_name}_state"
+          instance_variable_get(ivar) if instance_variable_defined?(ivar)
+        end
+
+        def load_collection(scope = scoped_resource, **settings)
           extras = settings.extract!(:includes, :preload, :eager_load, :joins)
-          scope = super(scope || scoped_resource, **settings)
-          scope = scope.strict_loading if admin_application_config.resource.default_strict_loading
-          extras.inject(scope) { |result, (method, value)| result.public_send(method, value) }
+          scope = super(scope, state = CollectionState.new, **settings)
+          scope = extras.inject(scope) { |result, (method, value)| result.public_send(method, value) }
+          state.ready!(scope)
         end
 
         def collection_ivar_name
-          :"@#{RESOURCE.plural}"
+          :"@#{admin_resource.plural}"
         end
     end
   end

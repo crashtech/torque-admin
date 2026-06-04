@@ -4,7 +4,7 @@ module Torque
   module Elements
     # = Torque Elements \Content Handler
     class ContentHandler < BaseHandler
-      PARTS = %i[prepend before content after append].to_set.freeze
+      PARTS = %i[before prepend content append after].to_set.freeze
 
       def combine(current, value)
         list_combine(current, value)
@@ -26,7 +26,7 @@ module Torque
         when Hash
           input.each { |key, value| each_value(value, key, &) if PARTS.include?(key) }
         when Enumerable
-          iter = part == :prepend ? :reverse_each : :each
+          iter = part == :before ? :reverse_each : :each
           input.send(iter) { |value| each_value(value, part, &) }
         when Method
           each_value(input.call, part, &)

@@ -20,16 +20,18 @@ module Torque
           instance_variable_set(ivar, find_member!)
         end
 
-        alias member resource
+        alias_method :member, :resource
+        alias_method :load_resource, :resource
 
-        def find_member!(id = params[RESOURCE_PARAM], scope: nil, by: scope.model.primary_key)
-          (scope || scoped_resource).find_sole_by(by => id)
+        def find_member!(id = params[self.class.primary_param], scope: scoped_resource, by: self.class.identified_by)
+          by ||= scope.model.primary_key
+          scope.find_sole_by(by => id)
         end
 
         # Internal methods
 
         def member_ivar_name
-          :"@#{RESOURCE.singular}"
+          :"@#{admin_resource.singular}"
         end
     end
   end

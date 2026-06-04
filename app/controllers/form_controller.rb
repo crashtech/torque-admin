@@ -9,6 +9,8 @@ module Torque
 
       included do
         helper_method :form_record, :form_element
+
+        alias_element :primary_form, :new_form, :create_form, :edit_form, :update_form
       end
 
       # TODO: Here we can setup a form element for a given action. This will simple coordinate prepare the underlying
@@ -20,20 +22,20 @@ module Torque
         ## External methods
 
         def form_record
-          ivar = try(:member_ivar_name) || :"@#{RESOURCE.singular}"
+          ivar = try(:member_ivar_name) || :"@#{admin_resource.singular}"
           return instance_variable_get(ivar) if instance_variable_defined?(ivar)
 
           instance_variable_set(ivar, initialize_form_record)
         end
 
         def initialize_form_record
-          params.key?(RESOURCE_PARAM) ? find_member! : build_new_record
+          processing_member_action? ? find_member! : build_new_record
         end
 
         # Internal methods
 
         def initialize_form(name = nil, **)
-          fetch_element(name || :"#{action_name}_form", values: params, **)
+          # fetch_element(name || :"#{action_name}_form", values: params, **)
         end
 
         def build_new_record(scope: nil, using: nil, attributes: nil)

@@ -24,8 +24,8 @@ module Torque
       end
 
       module Scoping
-        def section(name, &)
-          scope(path: name, as: name, annotations: { section: name }, &)
+        def section(name, **, &)
+          scope(path: name, as: name, annotations: { section: name }, **, &)
         end
 
         def with_actions(*actions, &)
@@ -146,11 +146,11 @@ module Torque
         end
 
         def action(*actions, view: false, add_alias: false, action: nil, via: :patch)
-          return actions(*actions, view: view, add_alias: add_alias, action: action, via: via) unless action_scope?
+          return actions(*actions, view:, add_alias:, action:, via:) unless action_scope?
 
           annotate(type: :action) do
             actions.each do |name|
-              view ? get(name, action: action).match(name, via: via) : match(name, action: action, via: via)
+              view ? get(name, action:).match(name, via:) : match(name, action:, via:)
               add_alias_for_action(action) if add_alias
             end
           end
@@ -160,14 +160,14 @@ module Torque
           raise ArgumentError, +"can't use widgets outside resource(s) scope" unless parent_resource
 
           on ||= @scope.scope_level == :resources ? :collection : :member if resource_scope?
-          annotate(type: :widget) { list.each { |widget| get(widget, action: action, on: on) } }
+          annotate(type: :widget) { list.each { |widget| get(widget, action:, on:) } }
         end
 
         def searchable(*resources, source: nil, **)
           return self if apply_common_behavior_for(:searchable, resources, **)
 
           with_scope_level(:resources) do
-            resource_scope(Resource.new(resources.pop, true, @scope[:shallow], source: source)) do
+            resource_scope(Resource.new(resources.pop, true, @scope[:shallow], source:)) do
               collection { get(:search) }
             end
           end
@@ -271,21 +271,23 @@ module Torque
       end
 
       module Dashboards
-        def dashboard(path = nil, partials: nil, as: :dashboard, controller: :dashboard, with_alias: true)
-          return scope(path: path, as: path) { dashboard(partials: partials) } if path
+        def dashboard(path = nil, partials: nil, as: :dashboard, controller: nil, with_alias: true)
+          controller ||= [*@scope.annotation(:section), *path, :dashboard].join('_').to_sym
+
+          return scope(path: path, as: path) { dashboard(partials:, as:, controller:, with_alias:) } if path
 
           with_scope_level(:dashboard) do
             scope(controller: controller) do
               yield if block_given?
               partials&.each { |partial| get(partial) }
-              match_root_route(as: as, action: :index)
+              match_root_route(as:, action: :index)
               add_dashboard_root_alias(as) if with_alias
             end
           end
         end
 
         def dashboard_root(as: :dashboard)
-          dashboard(as: as, with_alias: false) unless @set.named_routes.key?(:dashboard)
+          dashboard(as:, with_alias: false) unless @set.named_routes.key?(:dashboard)
           add_dashboard_root_alias(as)
         end
 
@@ -342,7 +344,6 @@ module Torque
           if (instance = @hash[:scope_level_resource])
             data[:resource] = annotate_resource(instance, controller, action)
             data[:nesting] = @hash[:nested_resources]
-            data[:param] = instance.param
           end
 
           data[:type] = annotation(:type) || scope_level

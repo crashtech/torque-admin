@@ -64,8 +64,10 @@ module Torque
         Mapper.new(routes).with_default_scope(routes.default_scope) { dashboard_root }
       end
 
-      def use_relative_resource_naming?
-        mod.respond_to?(:use_relative_model_naming?) && mod.use_relative_model_naming?
+      def authorization_adapter
+        if (value = config.resources.authorization_adapter)
+          value == :torque_admin ? 'Authorization' : value.to_s.classify
+        end
       end
 
       def fetch_resource(name)
@@ -76,8 +78,8 @@ module Torque
         return unless (@_controllers ||= Set.new).add?(controller)
 
         Rails.autoloaders.main.on_load(controller) do |klass, *|
-          klass.const_set(:RESOURCE, resource)
-          klass.const_set(:RESOURCE_PARAM, param)
+          klass.admin_resource = resource
+          klass.identified_by = klass.primary_param = param
         end
       end
 
@@ -87,6 +89,10 @@ module Torque
         MSG
 
         @auth_resources[name.to_sym] = type
+      end
+
+      def use_relative_resource_naming?
+        !!mod.try(:use_relative_model_naming?)
       end
 
       def inspect

@@ -9,7 +9,7 @@ module Torque
       attribute :registry
       attribute :refs, default: {}
 
-      before_reset { elements&.clear! }
+      before_reset { elements&.clear }
 
       def initialized?
         !view_context.nil?

@@ -5,6 +5,10 @@ module Torque
     module IndexController
       extend ActiveSupport::Concern
 
+      included do
+        alias_element :search_form, :index_form
+      end
+
       # TODO: Probably the most complex of all the controllers that are based on elements, as index can have multiple
       # shapes and have several related elements (e.g. filters, pagination, actions, batch actions, etc.)
       #

@@ -7,12 +7,13 @@ module Torque
 
       protected
 
-        def load_collection(a_scope, scope: default_scope_settings, **)
-          a_scope = scope_collection(a_scope, scope) if scope
-          super(a_scope, **)
+        def load_collection(s, state, scope: default_scope_settings, **)
+          s = scope_collection(s, state, scope) if scope
+          super(s, state, **)
         end
 
-        def scope_collection(scope, settings)
+        def scope_collection(scope, state, settings)
+          scope
         end
 
         def default_scope_settings
