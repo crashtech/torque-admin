@@ -15,6 +15,7 @@ module Torque
             options: (options = scope[:options] || {}),
           }
 
+          # TODO: We might be creating more routes than necessary, maybe that is why the reload is slow
           scope.annotate!(c, da, scope_params)
           new set: set, ast: ast, controller: c, default_action: da,
               to: to, formatted: f, via: via, options_constraints: oc,
@@ -369,6 +370,7 @@ module Torque
         def action_name(name_prefix, prefix, collection_name, member_name)
           case annotation(:type)
           when :action
+            return super if parent.scope_level == :new
             [prefix, name_prefix, collection_name]
           when :widget
             source = parent.scope_level == :member ? member_name : collection_name

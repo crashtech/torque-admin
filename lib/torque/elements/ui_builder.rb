@@ -114,8 +114,14 @@ module Torque
         view_context.controller.element_helper_name(element, node).dup.delete_prefix('render_')
       end
 
+      def removed_from_options(options)
+        (FalseClass === options.delete('if')) || (TrueClass === options.delete('unless')) ||
+          (TrueClass === options.delete('remove_if')) || (FalseClass === options.delete('remove_unless'))
+      end
+
       def append_options(options, values)
-        (options['@append'] ||= []) << values
+        list = options['@append'] ||= []
+        values.is_a?(Array) ? list.concat(values) : list << values
         options
       end
 
@@ -165,6 +171,8 @@ module Torque
 
       def render_tag(tag_name, options = {}, with_content: false)
         options = collapse_options(options)
+        return if removed_from_options(options)
+
         left, *inner, right = options.delete('@content')&.values_at(*ContentHandler::PARTS)
         content = view_context.safe_join(inner.flatten) if with_content && inner.present?
         content = tag_builder.public_send(tag_name, *content, **options)

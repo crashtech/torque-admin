@@ -9,7 +9,10 @@ module Torque
       attribute :registry
       attribute :refs, default: {}
 
-      before_reset { elements&.clear }
+      before_reset do
+        elements&.clear
+        @changes&.clear
+      end
 
       def initialized?
         !view_context.nil?
@@ -25,6 +28,21 @@ module Torque
 
       def add_ref(name, value)
         refs[name.to_sym] = value.to_s
+      end
+
+      def apply_changes(element, node, current)
+        items = @changes&.dig(element, node)
+        view_context.ui.append_options(current, items) if items
+        current
+      end
+
+      def change(element, node = :root, changes = nil)
+        return if changes.empty?
+
+        @changes ||= {}
+        @changes[element] ||= {}
+        @changes[element][node] ||= []
+        @changes[element][node] << changes
       end
     end
   end

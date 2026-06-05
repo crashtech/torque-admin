@@ -35,7 +35,7 @@ module Torque
         end
 
         def load_config!
-          return self if loaded?
+          return self if loading? || loaded?
 
           @state << 'loading'
           load(&@config) if @config
@@ -119,7 +119,7 @@ module Torque
           end
 
           def add_node!(node)
-            return unless loading?
+            return unless rendered?
 
             append_node(node)
             index_node(node) if node.id

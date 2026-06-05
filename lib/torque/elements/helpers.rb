@@ -46,6 +46,28 @@ module Torque
         @output_buffer, @virtual_path, @current_template = _old_output_buffer, _old_virtual_path, _old_template
       end
 
+      def append_changes_to(element, node = :root, options = nil)
+        Context.change(element, node, options)
+      end
+
+      def append_content_to(content, element, node = :root, at: 'append')
+        return unless content.present?
+
+        raise ArgumentError.new(<<~MSG) unless UiBuilder::CONTENT_OPTIONS.include?(at.to_s)
+          Invalid option for `at` argument: #{at.inspect}. Valid options are: #{UiBuilder::CONTENT_OPTIONS.inspect}.
+        MSG
+
+        Context.change(element, node, { at.to_sym => content })
+      end
+
+      def render_content_to(file, element, node = :root, at: 'append', **)
+        raise ArgumentError.new(<<~MSG) unless UiBuilder::CONTENT_OPTIONS.include?(at.to_s)
+          Invalid option for `at` argument: #{at.inspect}. Valid options are: #{UiBuilder::CONTENT_OPTIONS.inspect}.
+        MSG
+
+        Context.change(element, node, { at.to_sym => { render: file, ** } })
+      end
+
       private
 
         def with_elements_context(**extra)

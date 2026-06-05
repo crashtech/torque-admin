@@ -18,6 +18,9 @@ module Torque
       initializer 'torque-elements.default_attributes' do
         Elements.define_attribute('@content', ContentHandler.new)
 
+        Elements.define_attribute('remove_if', Elements.define_attribute('if', ContentHandler.new))
+        Elements.define_attribute('remove_unless', Elements.define_attribute('unless', ContentHandler.new))
+
         Elements.define_attribute('style', MapHandler.new(separator: ';', format: :dasherize, as_json: false))
         Elements.define_attribute('class', ListHandler.new)
         # Elements.define_attribute('name', FormatHandler.new('[%s]', include_first: false))

@@ -18,28 +18,38 @@ module Torque
         result
       end
 
-      # TODO: For better performance, turn this into an iterative method instead of recursive
       def each_value(input, part = :content, &)
-        case input
-        when NilClass
-          # Do nothing for nil values
-        when Hash
-          input.each { |key, value| each_value(value, key, &) if PARTS.include?(key) }
-        when Enumerable
-          iter = part == :before ? :reverse_each : :each
-          input.send(iter) { |value| each_value(value, part, &) }
-        when Method
-          each_value(input.call, part, &)
-        when Proc
-          each_value(view_context.instance_exec(&input), part, &)
-        when Symbol
-          if view_context.respond_to?(input)
-            each_value(view_context.public_send(input), part, &)
+        stack = [[part, input]]
+
+        until stack.empty?
+          current_part, current = stack.pop
+          next unless PARTS.include?(current_part)
+
+          case current
+          when NilClass, TrueClass, FalseClass
+            # Do nothing for nil these types of values
+          when Hash
+            if (render = current[:render]).present?
+              yield(current_part, view_context.capture { view_context.render(render, current.except(:render)) })
+            else
+              stack += current.to_a.reverse
+            end
+          when Enumerable
+            push_iter = current_part == :before ? :each : :reverse_each
+            current.send(push_iter) { |value| stack.push([current_part, value]) }
+          when Method
+            stack.push([current_part, current.call])
+          when Proc
+            stack.push([current_part, view_context.instance_exec(&current)])
+          when Symbol
+            if view_context.respond_to?(current)
+              stack.push([current_part, view_context.public_send(current)])
+            else
+              yield(current_part, current.to_s)
+            end
           else
-            yield(part, input.to_s)
+            yield(current_part, current.to_s)
           end
-        else
-          yield(part, input)
         end
       end
     end

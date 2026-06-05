@@ -50,11 +50,11 @@ module Torque
           end
 
           def add_on_position(node, options = node.options)
-            options.extract!(%i[insert_after insert_before prepend_to append_to]).each_value.find do |value|
+            options.extract!(*%i[insert_after insert_before prepend_to append_to]).find do |operation, value|
               next unless [Node, Symbol, TrueClass, FalseClass].include?(value.class)
               next unless (ref = ref_to_node(value))
 
-              break add_on_position!(node, ref, key)
+              break add_on_position!(node, ref, operation)
             end
           end
 

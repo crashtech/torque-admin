@@ -47,11 +47,14 @@ module Torque
           end
 
           def invoke_renderer(node, content = nil, **)
-            raise ArgumentError, "Node #{node.id} has already been rendered" if @rendered.key?(node.id)
+            id = node =~ :root ? :root : node.id
+            raise ArgumentError, "Node #{id} has already been rendered" if @rendered.key?(id)
 
             sanitize_node_options(node)
             args, kwargs = extract_render_options(node)
-            @rendered[node.id] = render_method(node).call(*args, content, **kwargs, **, :@node => node)
+            kwargs = Context.apply_changes(name, id, kwargs) if name
+
+            @rendered[id] = render_method(node).call(*args, content, **kwargs, **, :@node => node)
           end
 
           def rendered

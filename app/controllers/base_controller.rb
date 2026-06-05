@@ -24,6 +24,8 @@ module Torque
         layout admin_application.name.to_s
         frame 'classic'
 
+        main_menu { import_from_routes }
+
         def _protected_ivars
           super + %i[
             @_initialized_side_controllers @_slave_of @_route_annotations
@@ -61,6 +63,14 @@ module Torque
 
         def main_menu(**, &)
           element(:main_menu, of_type: :menu, detect_current: true, **, &)
+        end
+
+        def secondary_menu(**, &)
+          element(:secondary_menu, of_type: :menu, detect_current: true, **, &)
+        end
+
+        def profile_menu(**, &)
+          element(:profile_menu, of_type: :menu, **, &)
         end
 
         protected
