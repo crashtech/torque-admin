@@ -62,8 +62,8 @@ module Torque
           end
       end
 
-      def element_helper_name(element, node)
-        "render_#{element.type}_#{node.type}".chomp('_root')
+      def element_helper_name(node, base_type)
+        -"render_#{base_type}_#{node.type}".chomp('_root')
       end
 
       def elements_i18n_keys_for(*)

@@ -29,16 +29,11 @@ module Torque
           @state << 'initiated'
         end
 
-        def clear!
-          @config = @root = @state = nil
-          super
-        end
-
-        def load_config!
+        def load_config!(*)
           return self if loading? || loaded?
 
           @state << 'loading'
-          load(&@config) if @config
+          load(*, &@config) if @config
 
           @state << 'loaded'
         ensure
@@ -46,9 +41,9 @@ module Torque
           @config = nil
         end
 
-        def load(into: @root, &)
+        def load(*, into: @root, &)
           @interface = SimpleDelegator.new(self)
-          nest_content(into, &)
+          nest_content(into, *, &)
           self
         ensure
           @current = @interface = nil
@@ -59,7 +54,7 @@ module Torque
         end
 
         def change(identifier, **)
-          self[identifier]&.change(**)
+          fetch(identifier).change(**)
         end
 
         def change!(identifier, **)
@@ -76,41 +71,42 @@ module Torque
 
         alias delete remove
 
-        def import(other, from = :root)
-          return import_nodes(other, nil) if other.is_a?(Array)
-          return import_nodes([other], other) if other.is_a?(Node)
+        def import(other, from: :root, into: :root)
+          return import_nodes(other, nil, into) if other.is_a?(Array)
+          return import_nodes([other], other, into) if other.is_a?(Node)
 
           other = Context.registry[other] unless other.is_a?(Base)
           raise ArgumentError, "Expected an element definition, got #{other.class.name}" unless other.is_a?(Base)
 
           from = other.fetch(from)
-          import_nodes(from =~ :root ? from.children : [from], from)
+          import_nodes(from =~ :root ? from.children : [from], from, into)
         end
 
         protected
 
-          def build_node(id, type, options = {}, skip_depth: false)
-            Node.new(node_id(id), type, options, element: self, parent: @current || @root, skip_depth: skip_depth)
+          def build_node(id, type, options = nil, parent: @current || @root || self, node_type: Node)
+            klass = node_type.is_a?(Class) && node_type <= Node ? node_type : Node::CLASS_TYPES[node_type]&.constantize
+            raise ArgumentError, "Invalid node type: #{node_type}" if klass.nil?
+
+            instance = klass.new(node_id(id), type, parent, **options)
+            instance.instance_variable_set(:@element, self)
+            instance
           end
 
-          def add_node(id, type, skip_depth: false, **options, &block)
-            build_node(id, type, options, skip_depth: skip_depth).tap do |node|
-              add_node!(node)
-              nest_content(node, &block) if block_given?
-            end
+          def add_node(id, type, node_type = nil, **options, &)
+            node = build_node(id, type, options, node_type: node_type || Node)
+            add_node!(node)
+            nest_content(node, &) if block_given?
+            node
           end
 
-          def nest_content(node = @root, &block)
+          def nest_content(node = @root, *, &)
             @current = node
 
-            args = block.arity == 1 ? @interface : nil
-
             if !loading? && rendering?
-              rendered[node] = Context.view_context.capture(*args, &block)
-            elsif args
-              block.call(args)
+              node.content = Context.view_context.capture(@interface, *, &)
             else
-              @interface.instance_exec(&block)
+              yield(@interface)
             end
 
             node
@@ -125,15 +121,18 @@ module Torque
             index_node(node) if node.id
           end
 
-          def import_nodes(list, base)
+          def import_nodes(list, base, into)
             load_config!
-            traverse(list) do |node|
-              new_node = node.dup
-              new_node.instance_variable_set(:@element, self)
 
-              index_node(node)
-              append_to << node if node.parent == base
-            end
+            nodes = ref_to_node(into).children
+            # TODO: This doesn't work because we need to copy children and set parents accordingly after dup
+            # traverse(list) do |node|
+            #   new_node = node.dup
+            #   new_node.instance_variable_set(:@element, self)
+
+            #   index_node(node)
+            #   nodes << node if node.parent == base
+            # end
           end
       end
     end

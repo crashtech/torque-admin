@@ -20,11 +20,11 @@ module Torque
         define_singleton_method(:admin_application, &mod.method(:admin_application))
         append_view_path Admin::APP_DIR.join('views')
         helper Admin::ApplicationHelper
-        helper_method :ui_framework, :relative_path_for, :relative_url_for
+        helper_method :ui_framework, :relative_path_for, :relative_url_for, :route_annotation
         layout admin_application.name.to_s
         frame 'classic'
 
-        main_menu { import_from_routes }
+        main_menu { |menu| menu.import_from_routes }
 
         def _protected_ivars
           super + %i[
@@ -135,6 +135,8 @@ module Torque
             instance
           end
         end
+
+        # TODO: These two methods don't add too much value in general
 
         def relative_path_for(action)
           url_for(action:, only_path: true)

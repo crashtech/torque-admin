@@ -36,15 +36,7 @@ module Torque
         Context.registry || Registry.new(controller)
       end
 
-      def _run_under(buffer, template)
-        _old_output_buffer, _old_virtual_path, _old_template = @output_buffer, @virtual_path, @current_template
-        @current_template = template
-        @virtual_path = template.virtual_path
-        @output_buffer = buffer
-        yield self
-      ensure
-        @output_buffer, @virtual_path, @current_template = _old_output_buffer, _old_virtual_path, _old_template
-      end
+      ## Helpers for changing element-based content and options
 
       def append_changes_to(element, node = :root, options = nil)
         Context.change(element, node, options)
@@ -66,6 +58,18 @@ module Torque
         MSG
 
         Context.change(element, node, { at.to_sym => { render: file, ** } })
+      end
+
+      ## Essential for elements template rendering
+
+      def _run_under(buffer, template)
+        _old_output_buffer, _old_virtual_path, _old_template = @output_buffer, @virtual_path, @current_template
+        @current_template = template
+        @virtual_path = template.virtual_path
+        @output_buffer = buffer
+        yield self
+      ensure
+        @output_buffer, @virtual_path, @current_template = _old_output_buffer, _old_virtual_path, _old_template
       end
 
       private

@@ -7,10 +7,6 @@ module Torque
       module Index
         extend ActiveSupport::Concern
 
-        def clear!
-          @index = nil
-        end
-
         def index
           return @index if defined?(@index)
 
@@ -20,30 +16,31 @@ module Torque
         end
 
         def [](key)
-          index[node_id(key)]
+          key == :root ? @root : index[node_id(key)]
         end
 
         def fetch(key)
-          index.fetch(node_id(key)) { raise KeyError, "Key not found: #{key.inspect}" }
+          return @root if key == :root
+
+          index.fetch(node_id(key)) do
+            raise KeyError, "Key not found: #{key.inspect}"
+          end
         end
 
         def key?(key)
-          index.key?(node_id(key))
+          key == :root || index.key?(node_id(key))
         end
 
         alias has? key?
 
         def size
-          index.size - 1
+          index.size
         end
 
         protected
 
           def node_id(value)
-            return if value.nil?
-            return value if value == :root || (value.is_a?(String) && value.frozen?)
-
-            value.to_s.downcase.gsub(/[_\s]/, '-').gsub(/[^-a-z0-9]/, '')
+            Elements.node_id(value)
           end
 
           def index_node(node)
@@ -59,7 +56,15 @@ module Torque
 
           def reindex(node, as)
             unindex_node(node)
-            index[node.instance_variable_set(:@id, as)] = node
+            index[node.instance_variable_set(:@id, node_id(as))] = node
+          end
+
+          def ref_to_node(value)
+            return @root if value == :root
+            return value if value.is_a?(Node)
+            return @current || @root if value.eql?(true)
+
+            fetch(value)
           end
 
           def nodes_of_type(type)

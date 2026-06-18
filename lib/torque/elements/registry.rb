@@ -15,7 +15,7 @@ module Torque
         instance = klass.new(name, *, **)
 
         return instance.render_in(&) if block_given?
-        raise ::ArgumentError, +'Expected a block for inlined element' if name.nil?
+        return instance if name.nil?
 
         instances[name] ||= instance
       end
@@ -51,11 +51,6 @@ module Torque
 
       def key?(name)
         respond_to?(name)
-      end
-
-      def clear!
-        @instances.each_value(&:clear!)
-        @instances.clear
       end
 
       def method_missing(name, *, **, &)

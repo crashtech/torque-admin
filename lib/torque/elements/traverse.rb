@@ -8,9 +8,8 @@ module Torque
 
       attr_reader :stack, :current, :depth
 
-      # TODO: Use a simple index as part of the stack, instead of converting to an enumerator
       def initialize(list, max_depth: nil, min_depth: nil)
-        @stack = [[list.to_enum, 1]]
+        @stack = [[list, 0, 1]]
         @max_depth = max_depth || Float::INFINITY
         @min_depth = min_depth || 0
       end
@@ -22,7 +21,7 @@ module Torque
           next if stack_next
           break unless current || unstack
 
-          item = stack.last.first.next
+          item = fetch_next
           yield item if depth >= @min_depth
         end
       end
@@ -37,7 +36,7 @@ module Torque
           content = !current && unstack ? @content.pop : nil
           break unless depth
 
-          item = stack.last.first.next
+          item = fetch_next
           @content.last << yield(item, content) if depth >= @min_depth
         end
 
@@ -50,15 +49,23 @@ module Torque
           load_next
           return unless current&.branch?
 
-          next_depth = depth + (current.skip_depth? ? 0 : 1)
+          next_depth = depth + (current.ignore_depth? ? 0 : 1)
           return if next_depth > @max_depth
 
-          stack << [current.children.to_enum, next_depth]
+          stack << [current.children, 0, next_depth]
+        end
+
+        def fetch_next
+          ref = stack.last
+          item = ref[0][ref[1]]
+          ref[1] += 1
+          item
         end
 
         def load_next
-          @current = stack.last.first.peek rescue nil
-          @depth = stack.last.last
+          ref = stack.last
+          @current = ref[0][ref[1]]
+          @depth = ref[2]
         end
 
         def unstack

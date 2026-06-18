@@ -18,6 +18,8 @@ module Torque
     autoload :Registry
     autoload :Traverse
 
+    autoload :Component
+
     autoload :Context
     autoload :Helpers
     autoload :UiBuilder
@@ -32,6 +34,10 @@ module Torque
       autoload :RefHandler
     end
 
+    autoload_under :nodes do
+      autoload :LinkNode
+    end
+
     autoload_under :builders do
       autoload :AliasBuilder
       autoload :HelperBuilder
@@ -40,6 +46,14 @@ module Torque
     class << self
       def logger
         ActionView::Base.logger
+      end
+
+      def node_id(value)
+        return if value.nil?
+        return -value.to_s.tr('_', '-') if value.is_a?(Symbol)
+        return -value.map(&method(:node_id)).join('--') if value.is_a?(Array)
+
+        value.to_s.downcase.gsub('.', '--').gsub(/[_\s]/, '-').gsub(/[^-a-z0-9]/, '')
       end
 
       def attribute_name(name)

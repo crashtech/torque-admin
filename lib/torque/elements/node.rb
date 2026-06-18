@@ -1,21 +1,68 @@
 # frozen_string_literal: true
 
+require_relative 'nodes/rendering'
+require_relative 'nodes/textify'
+
 module Torque
   module Elements
     # = Torque Elements \Core Node
     class Node
-      attr_reader :id, :type, :parent, :options
+      CLASS_TYPES = {
+        link: 'Torque::Elements::LinkNode',
+      }
+
+      attr_reader :id, :type, :parent, :settings, :options
+
+      class_attribute :settings, instance_accessor: false, default: [].freeze
 
       delegate :[], :[]=, to: :options
+      delegate :tag, to: '::Torque::Elements::Context.view_context'
 
-      def initialize(id, type, options = {}, element: nil, parent: nil, skip_depth: false)
+      include Rendering
+      include Textify
+
+      alias to_s render
+      alias to_str render
+      alias html_safe render
+
+      append_render_handler do |node, element = nil, ui: Context.view_context.try(:ui)|
+        name = ui&.element_helper_name(node, element&.type)
+        [:render_with_helper, ui.method(name)] if name && ui&.respond_to?(name)
+      end
+
+      append_render_handler do |node, element = nil, base: Context.view_context|
+        name = base.element_helper_name(node, element&.type)
+        [:render_with_helper, base.method(name)] if name && base&.respond_to?(name)
+      end
+
+      class << self
+        protected
+
+          def settings=(values)
+            super(Array.wrap(values).map(&:to_sym).freeze)
+          end
+      end
+
+      def initialize(id, type, parent = nil, **options)
+        element, parent = parent, nil if parent.is_a?(Base)
+        element ||= parent&.instance_variable_get(:@element)
+
         @id = id
         @type = type.to_sym
-        @element = element
         @parent = parent
+        @element = element if element
 
-        @options = options.symbolize_keys
-        @skip_depth = skip_depth
+        extract_settings(options)
+        @options = options
+      end
+
+      def initialize_copy(other)
+        super
+
+        @parent = nil
+        @options = other.options.deep_dup
+        @settings = other.settings.dup if other.settings
+        remove_instance_variable(:@children)
       end
 
       def change(options)
@@ -26,6 +73,13 @@ module Torque
 
       def change!(options)
         @options.merge!(options)
+      end
+
+      def sanitized_options
+        return @options if @options.frozen?
+
+        sanitized_options!
+        @options.freeze
       end
 
       def children
@@ -46,27 +100,17 @@ module Torque
 
       alias =~ of_type?
 
-      def skip_depth?
-        @skip_depth
-      end
-
-      def render
-        raise "No element assigned to node #{id.inspect}" unless @element
-
-        @element.render_node(self)
-      end
-
-      def render_with(options)
-        @options.with(options) { render }
-      end
-
-      alias to_s render
-      alias to_str render
-      alias html_safe render
-
       def inspect
-        "#<#{self.class.name} id=#{id.inspect} type=#{type.inspect}>"
+        "#<#{self.class.name} id=#{id.inspect} type=#{type.inspect} children=#{children.size} options=#{options.inspect}>"
       end
+
+      protected
+
+        def extract_settings(options)
+          keys = @type == :root ? @element&.element_settings : self.class.settings
+          values = options.extract!(*Core::Nodes::POSITION_OPTIONS, *keys)
+          @settings = values if values.present?
+        end
     end
   end
 end

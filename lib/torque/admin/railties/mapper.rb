@@ -345,6 +345,9 @@ module Torque
           if (instance = @hash[:scope_level_resource])
             data[:resource] = annotate_resource(instance, controller, action)
             data[:nesting] = @hash[:nested_resources]
+            data[:source] = instance.singleton? ? :resource : :resources
+          elsif scope_level == :dashboard
+            data[:source] = :dashboard
           end
 
           data[:type] = annotation(:type) || scope_level

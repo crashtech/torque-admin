@@ -4,17 +4,12 @@ module Torque
   module Admin
     # = Torque Admin \Menu Element
     class MenuElement < BaseElement
-      def clear!
-        @icons_helper = @detect_current_helper = nil
-        super
-      end
-
       def type
         :menu
       end
 
       def element_settings
-        super + %i[sort icons detect_current icon_position]
+        super + %i[sort icons detect_current]
       end
 
       ## Define nodes
@@ -24,17 +19,17 @@ module Torque
         reindex(current, node_id("#{identifier}-container")) if current && !key?("#{identifier}-container")
 
         href, href_or_label = href_or_label, nil if href.nil?
-        add_node(identifier, :item, label: href_or_label || identifier, href: href, **, &)
+        add_node(identifier, :item, (Elements::LinkNode if href), label: href_or_label || identifier, href:, **, &)
       end
 
       def divider
-        @dividers ||= 0
-        add_node(node_id("-divider-#{@dividers += 1}"), :divider)
+        add_node(nil, :divider)
       end
 
       def import_from_routes(route_set = view_context._routes, actions: %w[index show], **settings)
         actions = Array.wrap(actions).map(&:to_s).to_set
 
+        sources = settings.fetch(:sources, %i[resource resources dashboard])
         authenticated_only = settings.fetch(:authenticated_only, true)
         divide_sections = settings.fetch(:divide_sections, false)
         sections_submenu = settings.fetch(:sections_submenu, true)
@@ -43,42 +38,42 @@ module Torque
         state = { dashboards: {}, current_section: [], sections: {}, divide_sections:, add_section_dashboard: }
 
         route_set.routes.each do |route|
-          next unless actions.include?((path = route.defaults)[:action])
           next unless route.verb == 'GET' && route.required_parts.empty?
+          next unless actions.include?((path = route.defaults)[:action])
           next if authenticated_only && !route.scope_options.dig(:annotations, :authenticated)
+          next if sources&.exclude?(route.scope_options.dig(:annotations, :source))
 
           section = import_route_section(route.scope_options.dig(:annotations, :section), state)
 
-          identifier = route.name
-          if identifier.end_with?('_dashboard') || identifier == 'dashboard'
-            import_dashboard_route(identifier.delete_suffix('_dashboard').to_sym, path, section, state)
+          identifier = route.name.delete_suffix('_dashboard').to_sym
+          if route.name.end_with?('_dashboard') || route.name == 'dashboard'
+            import_dashboard_route(identifier, path, section, state)
           elsif (node = state[:current_section].last)
-            item(identifier.to_sym, path, append_to: node) if sections_submenu
+            item(identifier, path, append_to: node) if sections_submenu
           else
-            item(identifier.to_sym, path, append_to: section)
+            item(identifier, path, append_to: section)
           end
         end
       end
 
       ## Renderer
 
-      def sanitize_node_options(node)
-        return super unless node =~ :item
-
-        node[:href] = view_context.url_for(node[:href]) if node[:href]
-        change_current_indicator(node) if settings[:detect_current]
-        icons_helper.call(node) if settings[:icons]
-        super
-      end
-
-      def text_for_fallback(value, *)
-        value.is_a?(String) ? value : value.to_s.underscore.titleize
+      def fallback_text_for(key, value, node)
+        value.to_s.underscore.titleize if node =~ :item && key == :label
       end
 
       ## Overrides
 
+      def current_link_setting
+        settings(:detect_current)
+      end
+
       def load_config!(*)
-        settings[:sort] ? super.tap { apply_sorting! } : super
+        return super unless (mode = settings(:sort))
+
+        result = super
+        apply_sorting!(mode, by: :label)
+        result
       end
 
       ## Others
@@ -87,60 +82,13 @@ module Torque
         index.each_value.select { |node| node.options[:href] }
       end
 
-      def apply_sorting!(mode = settings[:sort])
-        super(mode) { |node| label_for(node) }
-      end
-
-      def label_for(node)
-        resolve_text_for(node, :label)
-      end
-
-      def change_current_indicator(node)
-        node[:active] = true if current_active?(node)
-      end
-
-      def current_active?(node)
-        node[:href].present? && detect_current_helper.call(node[:href])
-      end
-
-      def detect_current_helper
-        @detect_current_helper ||= begin
-          method = TrueClass === settings[:detect_current] ? :current_page? : settings[:detect_current]
-          method.respond_to?(:call) ? method : view_context.method(method)
-        end
-      end
-
       def icons_helper
-        @icons_helper ||=
-          if settings[:icons].is_a?(Hash)
-            index = settings[:icons].transform_keys { |key| node_id(key) }
-            ->(node) { node[:icon] = index[node.id] }
-          else
-            helper = TrueClass === settings[:icons] ? :icon : settings[:icons]
-            helper = view_context.respond_to?(helper) ? view_context.method(helper) : view_context.ui.method(helper)
-            position = settings.fetch(:icon_position, :after)
-            ->(node) { node.append(position => helper.call(node.id)) }
-          end
+        return @icons_helper if defined?(@icons_helper)
+
+        @icons_helper = build_settings_handler(:icons, :icon)
       end
 
       protected
-
-        # TODO: Make this generic to sort by depth number filtered by types
-        def sortable_lists(mode)
-          return [nodes] if mode == :root
-
-          queue = [*nodes]
-          result = mode == :children ? [] : [nodes]
-
-          while queue.any?
-            if (current = queue.shift).branch?
-              queue += current.children
-              result << current.children
-            end
-          end
-
-          result
-        end
 
         def import_route_section(section, state)
           section = section&.to_sym

@@ -17,6 +17,7 @@ module Torque
 
         @config = DEFAULT_CONFIG.deep_dup
         @engine = Admin::Engine.build(self)
+        # TODO: Find a way to allow the admin application be the root application
         @mod = setup_application_module
 
         clear

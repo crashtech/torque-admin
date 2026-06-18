@@ -45,7 +45,7 @@ module Torque
         end
 
         def menu_item(content = nil, link = nil, **kwargs)
-          return super unless kwargs.delete(:@node)
+          return super unless (node = kwargs.delete(:@node))
 
           label = kwargs.delete(:label)
           as_link = kwargs[:href].present?

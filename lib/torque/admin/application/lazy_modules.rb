@@ -3,6 +3,7 @@
 module Torque
   module Admin
     class Application
+      # TODO: Refactor this into a more abstract lazy constant loader
       module LazyModules
         MODULES = {
           Resource: :build_resource_class,

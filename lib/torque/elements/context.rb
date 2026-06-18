@@ -9,6 +9,8 @@ module Torque
       attribute :registry
       attribute :refs, default: {}
 
+      delegate :node_id, to: 'Torque::Elements'
+
       before_reset do
         elements&.clear
         @changes&.clear
@@ -36,13 +38,13 @@ module Torque
         current
       end
 
-      def change(element, node = :root, changes = nil)
-        return if changes.empty?
+      def change(element, node = :root, **changes)
+        return if changes.empty? || (id = node_id(node)).nil?
 
         @changes ||= {}
         @changes[element] ||= {}
-        @changes[element][node] ||= []
-        @changes[element][node] << changes
+        @changes[element][id] ||= []
+        @changes[element][id] << changes
       end
     end
   end

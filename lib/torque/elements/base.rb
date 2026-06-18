@@ -5,6 +5,7 @@ require_relative 'core/helpers'
 require_relative 'core/index'
 require_relative 'core/nodes'
 require_relative 'core/render'
+require_relative 'core/template'
 
 module Torque
   module Elements
@@ -15,10 +16,10 @@ module Torque
     # For example, the logical representation of a table is its columns, not its rows.
     # Such representation can then be split into proper headers and other physical nodes.
     class Base
-
       include Core::Index
       include Core::Nodes
       include Core::Render
+      include Core::Template
 
       include Core::Helpers
       include Core::Definition
@@ -40,6 +41,11 @@ module Torque
       def inspect
         "#<#{self.class.name} name=#{name.inspect} type=#{type.inspect} id=#{id.inspect} nodes=#{size}>"
       end
+
+      alias render render_in
+      alias to_s render
+      alias to_str render
+      alias html_safe render
 
     end
   end

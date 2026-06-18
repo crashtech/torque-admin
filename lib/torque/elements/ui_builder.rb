@@ -110,8 +110,8 @@ module Torque
         self.class.name_of(self.class) || 'NONE'
       end
 
-      def element_helper_name(element, node)
-        view_context.controller.element_helper_name(element, node).dup.delete_prefix('render_')
+      def element_helper_name(*)
+        -view_context.controller.element_helper_name(*).dup.delete_prefix('render_')
       end
 
       def removed_from_options(options)
