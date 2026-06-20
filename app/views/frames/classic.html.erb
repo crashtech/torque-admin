@@ -1,7 +1,9 @@
 <%= ui.body(:classic) do %>
-  <%= elements.main_menu(prepend: app_banner) %>
+  <%= elements.main_menu(preset: :primary_horizontal, as: :header, prepend: app_banner) %>
 
   <main class="ui fluid container" style="flex: 1; padding: 1rem 0;">
+    <%= elements.breadcrumb %>
+    <%= @page_title %>
     <%= yield %>
   </main>
 

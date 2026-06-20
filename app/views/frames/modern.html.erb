@@ -1,13 +1,12 @@
 <%= ui.body(:modern) do %>
-  <header class="ui large menu" style="margin: 0;">
-    <%= app_banner %>
-  </header>
+  <%= elements.secondary_menu(preset: :secondary_horizontal, as: :header, prepend: app_banner) %>
 
   <main style="flex: 1; display: flex;">
-    <%= elements.main_menu(:vertical, as: :section) %>
+    <%= elements.main_menu(preset: :primary_vertical, as: :section) %>
 
     <div style="flex: 1; display: flex; flex-direction: column;">
       <div style="flex: 1; padding: 2rem;">
+        <%= elements.breadcrumb %>
         <%= yield %>
       </div>
 

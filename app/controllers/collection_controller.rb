@@ -45,7 +45,7 @@ module Torque
         end
 
         def collection_ivar_name
-          :"@#{admin_resource.plural}"
+          :"@#{admin_resource.plural_key}"
         end
     end
   end

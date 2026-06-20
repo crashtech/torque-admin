@@ -15,7 +15,7 @@ module Torque
 
       included do
         def _protected_ivars
-          super + %i[@_action_has_frame @_renders_templates] + _template_ivars
+          super + _template_ivars
         end
         private :_protected_ivars
       end

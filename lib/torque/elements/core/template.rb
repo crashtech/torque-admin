@@ -14,6 +14,10 @@ module Torque
             @element = element
           end
 
+          def __setobj__(element)
+            @element = element
+          end
+
           def render_content_only!
             @element.render_content_only!
           end
@@ -39,6 +43,7 @@ module Torque
             root.content = render_template_body(&)
             root.render!(outer: render_content_only?)
           ensure
+            @interface.__setobj__(nil)
             @interface = nil
           end
         end

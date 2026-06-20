@@ -11,9 +11,7 @@ module Torque
         link: 'Torque::Elements::LinkNode',
       }
 
-      attr_reader :id, :type, :parent, :settings, :options
-
-      class_attribute :settings, instance_accessor: false, default: [].freeze
+      attr_reader :id, :type, :parent, :options
 
       delegate :[], :[]=, to: :options
       delegate :tag, to: '::Torque::Elements::Context.view_context'
@@ -26,21 +24,24 @@ module Torque
       alias html_safe render
 
       append_render_handler do |node, element = nil, ui: Context.view_context.try(:ui)|
-        name = ui&.element_helper_name(node, element&.type)
-        [:render_with_helper, ui.method(name)] if name && ui&.respond_to?(name)
+        next if (name = ui&.element_helper_name(node, element&.type)).blank?
+
+        Rendering.attempted_render_handlers << "from helpers: `ui.#{name}`"
+        [:render_with_helper, ui.method(name)] if ui.respond_to?(name)
+      end
+
+      append_render_handler do |node, _element = nil, ui: Context.view_context.try(:ui)|
+        next if (name = ui&.element_helper_name(node)).blank?
+
+        Rendering.attempted_render_handlers << "from helpers: `ui.#{name}`"
+        [:render_with_helper, ui.method(name)] if ui.respond_to?(name)
       end
 
       append_render_handler do |node, element = nil, base: Context.view_context|
-        name = base.element_helper_name(node, element&.type)
-        [:render_with_helper, base.method(name)] if name && base&.respond_to?(name)
-      end
+        next if (name = base&.element_helper_name(node, element&.type)).blank?
 
-      class << self
-        protected
-
-          def settings=(values)
-            super(Array.wrap(values).map(&:to_sym).freeze)
-          end
+        Rendering.attempted_render_handlers << "from helpers: `#{name}`"
+        [:render_with_helper, base.method(name)] if base.respond_to?(name)
       end
 
       def initialize(id, type, parent = nil, **options)
@@ -103,14 +104,6 @@ module Torque
       def inspect
         "#<#{self.class.name} id=#{id.inspect} type=#{type.inspect} children=#{children.size} options=#{options.inspect}>"
       end
-
-      protected
-
-        def extract_settings(options)
-          keys = @type == :root ? @element&.element_settings : self.class.settings
-          values = options.extract!(*Core::Nodes::POSITION_OPTIONS, *keys)
-          @settings = values if values.present?
-        end
     end
   end
 end

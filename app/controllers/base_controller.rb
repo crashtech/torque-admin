@@ -18,22 +18,21 @@ module Torque
         raise +"Unable to determine the admin application" unless mod
 
         define_singleton_method(:admin_application, &mod.method(:admin_application))
+
+        prepend_view_path Rails.root.join('app', 'views', admin_application.name.to_s)
         append_view_path Admin::APP_DIR.join('views')
+
         helper Admin::ApplicationHelper
-        helper_method :ui_framework, :relative_path_for, :relative_url_for, :route_annotation
+        helper_method :ui_framework, :relative_path_for, :relative_url_for, :route_annotation, :implicit_page_title_for
+
         layout admin_application.name.to_s
         frame 'classic'
 
-        main_menu { |menu| menu.import_from_routes }
+        before_action :assign_page_title
 
-        def _protected_ivars
-          super + %i[
-            @_initialized_side_controllers @_slave_of @_route_annotations
-            @_chained_scoped_resource
-          ]
-        end
-
-        private :_protected_ivars
+        main_menu { |e| e.import_from_routes }
+        secondary_menu { |e| e.import_from_sections }
+        breadcrumb { |e| e.import_from_current_action }
       end
 
       class_methods do
@@ -45,8 +44,9 @@ module Torque
           admin_application.ui_builder.framework_name
         end
 
-        def admin_controller_name(namespace: '_')
-          name.gsub(/\A(?:#{"#{admin_application.mod.name}::"})?(.*)Controller\z/, '\1').underscore.tr('/', namespace)
+        def admin_controller_name(namespace: nil)
+          value = name.gsub(/\A(?:#{"#{admin_application.mod.name}::"})?(.*?)Controller\z/, '\1').underscore
+          namespace.present? ? value.tr('/', namespace) : value
         end
 
         def element_class_name(name)
@@ -66,11 +66,15 @@ module Torque
         end
 
         def secondary_menu(**, &)
-          element(:secondary_menu, of_type: :menu, detect_current: true, **, &)
+          element(:secondary_menu, of_type: :menu, detect_current: :current_page_prefix?, **, &)
         end
 
-        def profile_menu(**, &)
-          element(:profile_menu, of_type: :menu, **, &)
+        # def profile_menu(**, &)
+        #   element(:profile_menu, of_type: :menu, **, &)
+        # end
+
+        def breadcrumb(**, &)
+          element(:breadcrumb, of_type: :breadcrumb, **, &)
         end
 
         protected
@@ -93,6 +97,12 @@ module Torque
               mod
             end
           end
+
+        private
+
+          def local_prefixes
+            [admin_controller_name]
+          end
       end
 
       def elements_i18n_keys_for(*)
@@ -104,7 +114,19 @@ module Torque
         ]
       end
 
+      def implicit_page_title(fallback: action_name.to_s.titleize, **)
+        helpers.app_translate(:title, default: fallback, **i18n_default_option, **) || fallback
+      end
+
+      def implicit_page_title_for(action_name, **)
+        implicit_page_title(**, action: action_name)
+      end
+
       protected
+
+        def assign_page_title
+          @page_title = implicit_page_title
+        end
 
         def route_annotations
           @_route_annotations ||= request.get_header('action_dispatch.route').scope_options[:annotations] || {}
@@ -144,6 +166,26 @@ module Torque
 
         def relative_url_for(action)
           url_for(action:)
+        end
+
+        def i18n_default_scopes
+          return @_i18n_default_scopes if defined?(@_i18n_default_scopes)
+          return if (scopes = admin_application_config.i18n_default_scopes).blank?
+
+          values = i18n_default_values
+          @_i18n_default_scopes = scopes.map { |scope| format(scope, values) }
+        end
+
+        def i18n_default_values
+          {
+            namespace: admin_application.name,
+            controller: admin_controller_name,
+            controller_type: "#{self.class.try(:controller_type)}_controller".delete_prefix('_'),
+          }
+        end
+
+        def i18n_default_option(*)
+          # A placeholder to be used child controllers
         end
 
         def fallback_authorization_action

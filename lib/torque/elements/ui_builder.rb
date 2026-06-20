@@ -7,6 +7,7 @@ module Torque
       CONTENT_OPTIONS = (ContentHandler::PARTS - [:content]).map(&:to_s).map(&:freeze).freeze
       SPECIAL_OPTIONS = {
         '@node' => :noop,
+        '@element' => :noop,
         '@content' => :flatten_content_option,
         '@append' => :flatten_append_option,
         '@controller' => :flatten_controller_option,
@@ -111,7 +112,12 @@ module Torque
       end
 
       def element_helper_name(*)
-        -view_context.controller.element_helper_name(*).dup.delete_prefix('render_')
+        value = view_context.controller.element_helper_name(*)
+        -value.dup.delete_prefix('render_') if value
+      end
+
+      def menu_sections_for(menu)
+        [route_annotation(:section)] if menu == :main_menu && current_frame == 'frames/modern'
       end
 
       def removed_from_options(options)

@@ -22,7 +22,7 @@ module Torque
         ## External methods
 
         def form_record
-          ivar = try(:member_ivar_name) || :"@#{admin_resource.singular}"
+          ivar = try(:member_ivar_name) || :"@#{admin_resource.singular_key}"
           return instance_variable_get(ivar) if instance_variable_defined?(ivar)
 
           instance_variable_set(ivar, initialize_form_record)

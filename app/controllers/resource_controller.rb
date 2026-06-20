@@ -12,13 +12,18 @@ module Torque
         class_attribute :primary_param, instance_accessor: false, instance_predicate: false, default: :id
         class_attribute :identified_by, instance_accessor: false, instance_predicate: false
 
-        append_template_path Rails.root.join('app', 'templates', admin_application.name.to_s, 'resource')
-        append_template_path Rails.root.join('app', 'templates', 'resource')
+        [
+          Rails.root.join('app', 'templates', admin_application.name.to_s, 'resource'),
+          Rails.root.join('app', 'templates', 'resource'),
+        ].each { |path| append_template_path(path) if path.exist? }
         append_template_path Admin::APP_DIR.join('templates', 'resource')
 
-        stream_from_actions :index, :show if admin_application.config.stream_actions
+        helper_method :processing_member_action?, :implicit_resource_title, :implicit_resource_title_for
 
-        before_action :load_resource, if: :processing_member_action?
+        # stream_from_actions :index, :show if admin_application.config.stream_actions
+
+        prepend_before_action :load_resource, if: :processing_member_action?
+        prepend_before_action :find_chain_parents!
 
         authorize_actions! skip_if_none: true
       end
@@ -35,6 +40,35 @@ module Torque
       include ActionsController
       include WidgetsController
 
+      class_methods do
+        def controller_type
+          :resource
+        end
+      end
+
+      def implicit_page_title(**)
+        prefix = action_name.titleize unless action_name.in?(%w[index show])
+        suffix = implicit_resource_title if processing_member_action?
+        suffix ||= admin_resource.singular_title if instance_variable_defined?(member_ivar_name)
+        suffix ||= admin_resource.plural_title
+        super(fallback: [*prefix, suffix].join(' '), **)
+      end
+
+      def implicit_resource_title
+        return @_implicit_resource_title if defined?(@_implicit_resource_title)
+
+        @_implicit_resource_title = implicit_resource_title_for(resource)
+      end
+
+      def implicit_resource_title_for(object, using: admin_application_config.resources.title_methods)
+        Array.wrap(using).find do |method|
+          next unless object.respond_to?(method)
+
+          result = object.public_send(method)
+          break result if result.present?
+        end
+      end
+
       protected
 
         def processing_member_action?
@@ -46,28 +80,32 @@ module Torque
         end
 
         def scoped_resource
-          (chain = route_annotation(:nesting)).nil? ? default_scoped_resource : chained_scoped_resource(chain)
+          defined?(@_chained_members) ? chained_scoped_resource : default_scoped_resource
         end
 
         def default_scoped_resource
           admin_resource_class.default_scoped
         end
 
-        def chained_scoped_resource(chain)
-          @_chained_scoped_resource ||= nested_scope_from(find_chain_parent!(chain))
+        def chained_scoped_resource
+          nested_scope_from(@_chained_members.values.last)
         end
 
-        def find_chain_parent!(chain, values: params, assign: true)
+        def find_chain_parents!(chain = route_annotation(:nesting), values: params, assign: true)
+          return unless chain
+
+          @_chained_members = {}
           chain.reduce(nil) do |current, (key, controller)|
             controller = initialized_side_controllers["#{controller}_controller"]
 
             ivar = controller.send(:member_ivar_name)
-            next instance_variable_get(ivar) if instance_variable_defined?(ivar)
+            member = instance_variable_defined?(ivar) ? instance_variable_get(ivar) : begin
+              current = controller.send(:nested_scope_from, current) if current
+              controller.send(:find_member!, values[key], scope: current || controller.send(:default_scoped_resource))
+            end
 
-            current = controller.send(:nested_scope_from, current) if current
-            member = controller.send(:find_member!, values[key], scope: current)
             instance_variable_set(ivar, member) if assign
-            member
+            @_chained_members[controller] = member
           end
         end
 
@@ -80,7 +118,14 @@ module Torque
             Unable to find a reflection for #{foreign_member.class} within #{admin_resource_class}
           MSG
 
-          foreign_member.public_send(reflection)
+          default_scoped_resource.where(reflection.name => foreign_member)
+        end
+
+        def i18n_default_option(resource_name: processing_member_action?)
+          result = (super || {}).merge(singular: admin_resource.singular_title, plural: admin_resource.plural_title)
+          resource_name = implicit_resource_title if TrueClass === resource_name
+          result[:resource_name] = resource_name if resource_name
+          result
         end
 
         def fallback_authorization_action

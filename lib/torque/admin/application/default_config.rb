@@ -55,10 +55,23 @@ module Torque
         # first). By default, it is set to +Object+ and +Torque::Admin+.
         elements_lookup_context: ['Object', 'Torque::Admin'],
 
+        # The list of default constructed i18n scopes to look for translations in the admin application. Action needs to
+        # be escaped, so that cross-action translations can be resolved to the same controller. By default, it is set to
+        # the following list, where the placeholders will be replaced by the value.
+        i18n_default_scopes: [
+          '%<namespace>s.%<controller>s.%%<action>s',
+          '%<namespace>s.application.%%<action>s',
+          'torque_admin.%<controller_type>s.%%<action>s',
+        ],
+
         ## Behaviors Section
 
         # All specific configuration for handling resources in the admin application.
         resources: config.new(
+          # Inspired by Formtastic's label methods, and Active Admin's display name methods, this is the list of methods
+          # that will be tried in order to find a suitable title for a resource
+          title_methods: %i[display_name full_name name title username login value to_s],
+
           # Configures the default adapter that will handle resource-based authorization in the admin application. The
           # default options are: cancancan, pundit, torque_admin, or nil to disable
           authorization_adapter: nil,

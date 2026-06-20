@@ -1,9 +1,13 @@
 # frozen_string_literal: true
 
+require_relative 'resource/active_model'
+
 module Torque
   module Admin
     # = Torque Admin \Resource
     class Resource
+      include ActiveModel
+
       delegate :admin_application, to: 'self.class.module_parent'
 
       attr_reader :name, :controllers, :sections, :widgets, :actions, :primary_handler
@@ -42,12 +46,20 @@ module Torque
         @resource_class ||= name.classify.constantize
       end
 
-      def singular
-         resource_class.respond_to?(:model_name) ? resource_class.model_name.singular : name.split('/').last.singularize
+      def singular_key
+        name.split('/').last.singularize
       end
 
-      def plural
-         resource_class.respond_to?(:model_name) ? resource_class.model_name.plural : name.split('/').last.pluralize
+      def singular_title
+        singular_key.titleize
+      end
+
+      def plural_key
+        name.split('/').last.pluralize
+      end
+
+      def plural_title
+        plural_key.titleize
       end
 
       def inspect

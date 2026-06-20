@@ -10,20 +10,32 @@ module Torque
         append_template_path Rails.root.join('app', 'templates', 'dashboard')
         append_template_path Admin::APP_DIR.join('templates', 'dashboard')
 
-        stream_actions :index if admin_application.config.stream_actions
+        helper_method :dashboard_name
+
+        # stream_actions :index if admin_application.config.stream_actions
 
         authorize_actions! skip_if_none: true
       end
 
       include StreamController
 
+      class_methods do
+        def controller_type
+          :dashboard
+        end
+      end
+
       protected
 
         def dashboard_name
-          self.class.name.gsub(/\A(?:#{"#{admin_application.mod.name}::"})?(.*)Controller\z/, '\1')
+          self.class.name.gsub(/\A(?:#{"#{admin_application.mod.name}::"})?(.*?)(?:Dashboard)?Controller\z/, '\1')
         end
 
         alias_method :authorizable_resource, :dashboard_name
+
+        def i18n_default_option
+          (super || {}).merge(name: dashboard_name.tr('/', ' ').titleize)
+        end
 
     end
   end

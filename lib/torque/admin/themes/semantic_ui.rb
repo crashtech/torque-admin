@@ -5,10 +5,14 @@ module Torque
     module Themes
       module SemanticUI
         include Elements::Helpers::SemanticUI
-        # TODO: include Elements::Visitors
 
         def self.elements_presets
           {
+            menu: {
+              primary_horizontal: { class: 'inverted large', style: { margin: 0, border_radius: 0 } },
+              secondary_horizontal: { class: 'large', style: { margin: 0, border_radius: 0 } },
+              primary_vertical: { class: 'inverted left vertical', style: { margin: 0, border_radius: 0 } },
+            },
             body: {
               default: { style: { min_height: '100vh' } },
               classic: { style: { display: :flex, flex_direction: :column } },
@@ -18,6 +22,8 @@ module Torque
           }
         end
 
+        def breadcrumb_with_dividers = true
+
         def body(preset, **kwargs, &content)
           defaults = { class: [preset, app_body_classes] }
           options = build_options(fetch_presets(:default, preset, from: :body), defaults, kwargs)
@@ -25,40 +31,12 @@ module Torque
         end
 
         def application_banner(content, **kwargs)
-          # url_for(:root)
-          menu_item(content, '#', **kwargs)
+          menu_item(content, url_for(:root), **kwargs)
         end
 
         def logo(src, **kwargs)
-          defaults = { src: src, class: 'logo', width: 35, style: { margin_right: '2ex' } }
-          render_tag(:img, build_options(defaults, kwargs))
-        end
-
-
-        def menu(content, **kwargs)
-          return super unless kwargs.delete(:@node)
-
-          menu(content, inverted: true, **append_options(kwargs,
-            class: { 'left' => kwargs[:vertical] }),
-            style: { margin: 0, border_radius: 0 },
-          )
-        end
-
-        def menu_item(content = nil, link = nil, **kwargs)
-          return super unless (node = kwargs.delete(:@node))
-
-          label = kwargs.delete(:label)
-          as_link = kwargs[:href].present?
-
-          return (as_link ? super(label, **kwargs) : menu_header(label, **kwargs)) if content.nil?
-
-          submenu = submenu(content, **kwargs.delete(:submenu))
-          append_options(kwargs, class: { header: false }, append: submenu)
-
-          return menu_header(label, dropdown: true, **kwargs) unless as_link
-
-          options = kwargs.extract!(:after, :dropdown, :prepend, :append, '@append')
-          menu_item(menu_item(label, **kwargs), **options)
+          options = { src: , class: 'logo', style: { display: 'inline-block', margin_right: '1.5ex' } }
+          render_tag(:img, build_options(options, kwargs))
         end
       end
     end

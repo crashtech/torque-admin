@@ -15,6 +15,7 @@ module Torque
 
       included do
         class_attribute :_frame, instance_accessor: false
+        helper_method :current_frame
         _write_frame_method
       end
 
@@ -107,6 +108,12 @@ module Torque
         @_action_has_frame
       end
 
+      protected
+
+        def current_frame
+          defined?(@_current_frame) && @_current_frame&.to_s
+        end
+
       private
 
         def _frame(*)
@@ -154,7 +161,7 @@ module Torque
           return layout unless frame && layout
 
           proc do |*args|
-            resolved_frame = frame.respond_to?(:call) ? frame.call(*args) : frame
+            @_current_frame = resolved_frame = frame.respond_to?(:call) ? frame.call(*args) : frame
             layout = FrameRenderer.new(resolved_frame, layout, options, *args) if resolved_frame
             layout
           end

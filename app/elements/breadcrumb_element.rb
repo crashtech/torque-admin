@@ -3,78 +3,63 @@
 module Torque
   module Admin
     # = Torque Admin \Breadcrumb Element
+    #
+    # The name is in singular form mostly due to MDN and W3C using "breadcrumb" instead of "breadcrumbs"
     class BreadcrumbElement < BaseElement
+      include ItemsFromAction
+
+      attr_accessor :divider_content
+
+      alias label_for action_label_for
+      alias import_from_current_action import_items_from_current_action
+
       def type
         :breadcrumb
+      end
+
+      def element_settings
+        super + %i[auto_dividers]
       end
 
       ## Define nodes
 
       def home(label = nil)
-        label = nil if TrueClass === label
-        item(:home, label, view_context.root_path, prepend_to: :root)
+        item(:home, (label unless TrueClass === label), view_context.url_for(:root), prepend_to: :root)
+      end
+
+      def section(label, href_or_name = nil)
+        return item(:section, label, href_or_name) if href_or_name.is_a?(String)
+
+        section = href_or_name.is_a?(Symbol) ? href_or_name : view_context.route_annotation(:section)
+        item(:section, label, { controller: "#{section}_dashboard", action: :index })
       end
 
       def item(identifier, href_or_label = nil, href = nil, **, &)
+        divider if children.any? && auto_dividers?
+
         href, href_or_label = href_or_label, nil if href.nil?
-        add_node(identifier, :item, label: href_or_label || identifier, href:, **, &)
+        href_or_label = label_for(href[:action], controller: href[:controller]) if href_or_label == true
+        add_node(identifier, :item, (Elements::LinkNode if href), label: href_or_label || identifier, href:, **, &)
+      end
+
+      alias import_item item
+
+      def divider(content = nil)
+        add_node(nil, :divider, prepend: content || divider_content || '/')
       end
 
       def pop
         remove(root.children.last)
       end
 
-      ## Generators
+      ## Others
 
-      def build_simple(with_home: true, with_section: true)
-        home(with_home) if with_home
-        return build_dashboard(with_section) if current_dashboard?
-
-        build_section(with_section) if with_section
+      def auto_dividers!
+        change_setting(:auto_dividers, true)
       end
 
-      def build_full_chain(with_home: true, with_section: true)
-        home(with_home) if with_home
-        return build_dashboard(with_section) if current_dashboard?
-
-        build_section(with_section) if with_section
-      end
-
-      def build_full_route(with_home: true, with_section: true)
-        home(with_home) if with_home
-        return build_dashboard(with_section) if current_dashboard?
-
-        build_section(with_section) if with_section
-      end
-
-      def build_section(label)
-        return unless (section = view_context.route_annotation(:section))
-
-        href = Rails.error.handle(ActionController::UrlGenerationError, severity: :info) do
-          view_context.url_for(controller: "#{section}_dashboard", action: :show)
-        end
-
-        item(section, label, href)
-      end
-
-      def build_dashboard(with_section)
-        controller = [*view_context.route_annotation(:section), :dashboard].join('_')
-        build_section(with_section) if with_section && controller != view_context.admin_controller_name
-
-        name = request.get_header('action_dispatch.route').name.to_sym
-        item(name, nil, view_context.url_for(controller: controller, action: :show))
-      end
-
-      ## Renderer
-
-      def sanitize_node_item_options(node)
-        node[:href] = view_context.url_for(node[:href]) if node[:href]
-      end
-
-      ## Helpers
-
-      def current_dashboard?
-        view_context.route_annotation(:source) == :dashboard
+      def auto_dividers?
+        settings(:auto_dividers, view_context.try(:ui).try(:breadcrumb_with_dividers))
       end
     end
   end

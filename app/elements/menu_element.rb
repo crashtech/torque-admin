@@ -4,12 +4,36 @@ module Torque
   module Admin
     # = Torque Admin \Menu Element
     class MenuElement < BaseElement
+      include ItemsFromRouter
+
+      alias import_from_routes import_items_from_router
+      alias import_from_sections import_items_from_sections
+
+      custom_render_for(:item) do |content = nil, **options|
+        node = options.delete(:@node)
+        label = options.delete(:label)
+        as_link = options[:href].present?
+
+        if content.present?
+          submenu = ui.submenu(content, **options.delete(:submenu))
+          dropdown = !!options[:@element].settings(:dropdowns, true)
+          ui.append_options(options, (dropdown ? :append : :after) => submenu)
+
+          label = ui.menu_item(label, options.slice!(:after, :dropdown, :prepend, :append, '@append')) if as_link
+          ui.menu_header(label, dropdown: dropdown.presence, **options)
+        elsif as_link
+          ui.menu_item(label, **options)
+        else
+          ui.menu_header(label, **options)
+        end
+      end
+
       def type
         :menu
       end
 
       def element_settings
-        super + %i[sort icons detect_current]
+        super + %i[sort icons dropdowns detect_current]
       end
 
       ## Define nodes
@@ -22,38 +46,10 @@ module Torque
         add_node(identifier, :item, (Elements::LinkNode if href), label: href_or_label || identifier, href:, **, &)
       end
 
+      alias import_item item
+
       def divider
         add_node(nil, :divider)
-      end
-
-      def import_from_routes(route_set = view_context._routes, actions: %w[index show], **settings)
-        actions = Array.wrap(actions).map(&:to_s).to_set
-
-        sources = settings.fetch(:sources, %i[resource resources dashboard])
-        authenticated_only = settings.fetch(:authenticated_only, true)
-        divide_sections = settings.fetch(:divide_sections, false)
-        sections_submenu = settings.fetch(:sections_submenu, true)
-        add_section_dashboard = settings.fetch(:add_section_dashboard, true)
-
-        state = { dashboards: {}, current_section: [], sections: {}, divide_sections:, add_section_dashboard: }
-
-        route_set.routes.each do |route|
-          next unless route.verb == 'GET' && route.required_parts.empty?
-          next unless actions.include?((path = route.defaults)[:action])
-          next if authenticated_only && !route.scope_options.dig(:annotations, :authenticated)
-          next if sources&.exclude?(route.scope_options.dig(:annotations, :source))
-
-          section = import_route_section(route.scope_options.dig(:annotations, :section), state)
-
-          identifier = route.name.delete_suffix('_dashboard').to_sym
-          if route.name.end_with?('_dashboard') || route.name == 'dashboard'
-            import_dashboard_route(identifier, path, section, state)
-          elsif (node = state[:current_section].last)
-            item(identifier, path, append_to: node) if sections_submenu
-          else
-            item(identifier, path, append_to: section)
-          end
-        end
       end
 
       ## Renderer
@@ -68,6 +64,7 @@ module Torque
         settings(:detect_current)
       end
 
+      # TODO: Maybe turn this into a callback
       def load_config!(*)
         return super unless (mode = settings(:sort))
 
@@ -87,34 +84,6 @@ module Torque
 
         @icons_helper = build_settings_handler(:icons, :icon)
       end
-
-      protected
-
-        def import_route_section(section, state)
-          section = section&.to_sym
-
-          return state[:current_section].clear && :root if section.nil?
-          return state[:sections][section] if section == state[:current_section].first
-
-          divider if state[:divide_sections] && state[:sections].any?
-          node = state[:sections][section] ||= item(section.to_sym)
-          state[:current_section] = [section, node]
-          node
-        end
-
-        def import_dashboard_route(identifier, path, section, state)
-          if state[:current_section].first == identifier
-            if state[:add_section_dashboard]
-              item(:dashboard, path, prepend_to: state[:current_section].last)
-            else
-              state[:current_section].last.change(href: path)
-            end
-          elsif state[:current_section].first.nil? && identifier == :dashboard
-            item(identifier, path, prepend_to: :root)
-          else
-            item(identifier, path, append_to: section)
-          end
-        end
 
     end
   end

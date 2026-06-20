@@ -49,6 +49,12 @@ module Torque
         end
       end
 
+      initializer 'torque-elements.action_controller_setup' do
+        ActiveSupport.on_load(:action_controller) do
+          ActionController::Base::PROTECTED_IVARS.concat(%i[@_action_has_frame @_current_frame @_renders_templates])
+        end
+      end
+
       initializer 'torque-elements.add_helpers' do
         ActiveSupport.on_load(:action_view) { include Elements::Helpers }
       end

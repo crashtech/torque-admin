@@ -4,6 +4,8 @@ module Torque
   module Elements
     # = Torque Elements \Link Node
     class LinkNode < Node
+      self.settings += %i[remove_if_invalid]
+
       def active?
         return @active if defined?(@active)
         return unless (path = href).present?
@@ -17,10 +19,19 @@ module Torque
       alias current? active?
 
       def href
-        current = options[:href]
+        return if (current = options[:href]).nil?
         return current if current.is_a?(String)
 
-        options[:href] = Context.view_context.url_for(current) if current
+        path = Rails.error.handle(ActionController::UrlGenerationError, severity: :info) do
+          Context.view_context.url_for(current)
+        end
+
+        if path.present?
+          options[:href] = path
+        elsif settings&.[](:remove_if_invalid)
+          options.delete(:href)
+          options[:if] = false
+        end
       end
 
       def sanitize_link_options
@@ -37,8 +48,3 @@ module Torque
     end
   end
 end
-
-
-      # def sanitize_node_item_options(node)
-      #   icons_helper&.call(node)
-      # end

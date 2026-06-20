@@ -7,8 +7,16 @@ module Torque
       module Helpers
         extend ActiveSupport::Concern
 
-        def settings(key = nil)
-          (hash = @root.settings) && (key.nil? ? hash : hash[key])
+        def settings(key = nil, default = nil)
+          (hash = @root.settings).nil? ? default : (key.nil? ? hash : hash.fetch(key, default))
+        end
+
+        def settings?(key)
+          !!@root.settings&.key?(key)
+        end
+
+        def change_setting(key, value)
+          @root.settings&.[]=(key, value) || @root.instance_variable_set(:@settings, { key => value })
         end
 
         def element_settings

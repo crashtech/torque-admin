@@ -1,8 +1,9 @@
 <%= ui.body(:sidebar) do %>
-  <%= elements.main_menu(:vertical, as: :header, prepend: app_banner) %>
+  <%= elements.main_menu(preset: :primary_vertical, prepend: app_banner) %>
 
   <main style="flex: 1; display: flex; flex-direction: column;">
     <div style="flex: 1; padding: 1rem 2rem;">
+      <%= elements.breadcrumb %>
       <%= yield %>
     </div>
 

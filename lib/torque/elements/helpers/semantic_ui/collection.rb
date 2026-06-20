@@ -20,7 +20,7 @@ define :menu_item do |b|
   b.preset(:header, as: 'div', class: 'header')
 
   b.toggles(:active, :link, :fitted)
-  b.property(:dropdown).applies(class: 'ui dropdown').calls(:icon, "('dropdown')").adds_to_content(:append)
+  b.property(:dropdown).applies(class: ['ui dropdown', { header: false }]).calls(:icon, "('dropdown')").adds_to_content(:append)
   b.property(:disabled).applies(class: 'disabled', inert: true)
   b.property(:label).adds_to_content
 
@@ -28,3 +28,12 @@ define :menu_item do |b|
 end
 
 associate :menu_header, to: :menu_item, preset: :header
+
+define :breadcrumb do |b|
+  b.preset(:default, as: 'nav', class: 'ui breadcrumb', aria: { label: 'breadcrumb' })
+
+  b.toggles(:inverted)
+  b.imports(:size)
+end
+
+associate :breadcrumb_item, to: :menu_item

@@ -1,0 +1,35 @@
+---
+en:
+  torque_admin:
+    dashboard_controller:
+      index:
+        title: "Dashboard"
+        breadcrumb: "%{name}"
+    resource_controller:
+      index:
+        title: "%{plural}"
+        breadcrumb: "%{plural}"
+      search:
+        title: "Search %{plural}"
+        breadcrumb: "Search"
+      show:
+        title: "%{resource_name}"
+        breadcrumb: "%{resource_name}"
+      preview:
+        title: "Preview %{resource_name}"
+        breadcrumb: "Preview"
+      new:
+        title: "Create %{singular}"
+        breadcrumb: "Create"
+      create:
+        title: "Create %{singular}"
+        breadcrumb: "Create"
+      edit:
+        title: "Edit %{resource_name}"
+        breadcrumb: "Edit"
+      update:
+        title: "Edit %{resource_name}"
+        breadcrumb: "Edit"
+      destroy:
+        title: "Delete %{resource_name}"
+        breadcrumb: "Delete"

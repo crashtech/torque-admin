@@ -18,6 +18,11 @@ module Torque
 
     autoload :CollectionState
 
+    autoload_under :concerns do
+      autoload :ItemsFromAction
+      autoload :ItemsFromRouter
+    end
+
     # = Torque Admin \Themes
     module Themes
       extend ActiveSupport::Autoload
@@ -76,6 +81,7 @@ module Torque
 
       app_autoload :BaseElement
       app_autoload :MenuElement
+      app_autoload :BreadcrumbElement
 
       app_autoload :ApplicationHelper
     end

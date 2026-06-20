@@ -37,7 +37,7 @@ module Torque
           @options[option] ||= default.is_a?(String) ? default : begin
             raise ::I18n::MissingTranslationData unless defined?(@element)
 
-            values = { name: @element.send(:i18n_name), type: @type, id: @id }
+            values = { name: @element.send(:i18n_name), type: @type, id: @id.underscore }
             keys = map_i18n_keys(option) { |key| format(key, values).to_sym }
             ::I18n.translate(keys.shift, default: keys, raise: true)
           rescue ::I18n::MissingTranslationData
@@ -76,7 +76,7 @@ module Torque
               next yield(key) if option.nil?
 
               value = yield("#{key}.#{option}")
-              next value if option.to_s != primary
+              next value if option != primary
 
               [value, yield(key)]
             end

@@ -62,8 +62,10 @@ module Torque
           end
       end
 
-      def element_helper_name(node, base_type)
-        -"render_#{base_type}_#{node.type}".chomp('_root')
+      def element_helper_name(node, base_type = nil)
+        return if base_type.nil? && node =~ :root
+
+        -[:render, *base_type.presence, *(node.type unless node =~ :root)].join('_')
       end
 
       def elements_i18n_keys_for(*)

@@ -20,6 +20,18 @@ module Torque
         ActionDispatch::Routing::Mapper.include(Routing)
         ActionDispatch::Routing::Mapper::Mapping.singleton_class.prepend(Mapper::Mapping)
         Mapper.send(:undef_method, :admin)
+
+        config.i18n.load_path << Pathname.new(__dir__).join('en.yml').to_s
+      end
+
+      initializer 'torque-admin.action_controller_setup' do
+        ActiveSupport.on_load(:action_controller) do
+          ActionController::Base::PROTECTED_IVARS.concat(%i[
+            @_initialized_side_controllers @_slave_of @_route_annotations
+            @_chained_scoped_resource @_chained_members
+            @_i18n_default_scopes @_implicit_resource_title
+          ])
+        end
       end
     end
   end

@@ -41,14 +41,18 @@ module Torque
         end
 
         def render_handler_for(node)
-          render_methods[render_cache_key_for(node)] ||= begin
+          render_methods[render_cache_key_for(node)] ||= fetch_render_for(node)
+        end
+
+        protected
+
+          def fetch_render_for(node)
             if (custom = self.class.custom_renders[node.type])
-              ->(*args) { Context.view_context.instance_exec(*args) }
+              ->(*args, **kwargs) { Context.view_context.instance_exec(*args, **kwargs, :@element => self, &custom) }
             else
               render_methods[node.type] || node.class.render_handler_for(node, self)
             end
           end
-        end
 
         private
 

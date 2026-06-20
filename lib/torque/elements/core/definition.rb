@@ -21,9 +21,7 @@ module Torque
           @name = name
           @state = Set.new
           @config = config
-
-          options = args.grep(Symbol).product([true]).to_h.merge(options)
-          @root = build_node(name, :root, options)
+          @root = build_root_node(args, options)
 
           super()
           @state << 'initiated'
@@ -36,6 +34,7 @@ module Torque
           load(*, &@config) if @config
 
           @state << 'loaded'
+          self
         ensure
           @state.delete('loading')
           @config = nil
@@ -46,6 +45,7 @@ module Torque
           nest_content(into, *, &)
           self
         ensure
+          @interface.__setobj__(nil)
           @current = @interface = nil
         end
 
@@ -84,6 +84,10 @@ module Torque
 
         protected
 
+          def build_root_node(args, options)
+            build_node(@name, :root, args.grep(Symbol).product([true]).to_h.merge(options))
+          end
+
           def build_node(id, type, options = nil, parent: @current || @root || self, node_type: Node)
             klass = node_type.is_a?(Class) && node_type <= Node ? node_type : Node::CLASS_TYPES[node_type]&.constantize
             raise ArgumentError, "Invalid node type: #{node_type}" if klass.nil?
@@ -100,13 +104,15 @@ module Torque
             node
           end
 
-          def nest_content(node = @root, *, &)
+          def nest_content(node = @root, *, &block)
             @current = node
 
             if !loading? && rendering?
-              node.content = Context.view_context.capture(@interface, *, &)
+              node.content = Context.view_context.capture(@interface, *, &block)
+            elsif block.arity == 0
+              @interface.instance_eval(&block)
             else
-              yield(@interface)
+              yield(@interface, *)
             end
 
             node
