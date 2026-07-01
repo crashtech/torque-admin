@@ -6,9 +6,11 @@ module Torque
       extend ActiveSupport::Concern
 
       included do
-        append_template_path Rails.root.join('app', 'templates', admin_application.name.to_s, 'dashboard')
-        append_template_path Rails.root.join('app', 'templates', 'dashboard')
-        append_template_path Admin::APP_DIR.join('templates', 'dashboard')
+        [
+          Rails.root.join('app', 'templates', admin_application.name.to_s, 'dashboard'),
+          Rails.root.join('app', 'templates', 'dashboard'),
+          Admin::APP_DIR.join('templates', 'dashboard'),
+        ].each { |path| append_template_path(path, prefix: admin_application.name.to_s) if path.exist? }
 
         helper_method :dashboard_name
 

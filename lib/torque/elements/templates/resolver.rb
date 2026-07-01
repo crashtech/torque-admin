@@ -8,6 +8,11 @@ module Torque
       # = Torque Elements \Templates Resolver
       class Resolver < ActionView::FileSystemResolver
 
+        def initialize(path, prefix = nil)
+          super(path)
+          @prefix = prefix
+        end
+
         private
 
           def _find_all(name, prefix, partial, details, key, locals)
@@ -21,7 +26,7 @@ module Torque
             end
 
             filter_and_sort_by_details(unbound_templates, requested_details).map do |unbound_template|
-              unbound_template.bind_path(path)
+              unbound_template.bind_path(path, @prefix)
             end
           end
 

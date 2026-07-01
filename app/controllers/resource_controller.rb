@@ -15,8 +15,8 @@ module Torque
         [
           Rails.root.join('app', 'templates', admin_application.name.to_s, 'resource'),
           Rails.root.join('app', 'templates', 'resource'),
-        ].each { |path| append_template_path(path) if path.exist? }
-        append_template_path Admin::APP_DIR.join('templates', 'resource')
+          Admin::APP_DIR.join('templates', 'resource'),
+        ].each { |path| append_template_path(path, prefix: admin_application.name.to_s) if path.exist? }
 
         helper_method :processing_member_action?, :implicit_resource_title, :implicit_resource_title_for
 

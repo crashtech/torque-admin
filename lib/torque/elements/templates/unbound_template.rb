@@ -18,6 +18,7 @@ module Torque
             locals: nil,
           )
 
+          @extension = @identifier.split('.', 2).last
           @templates = Concurrent::Map.new(initial_capacity: 2)
         end
 
@@ -31,23 +32,19 @@ module Torque
           super(array)
         end
 
-        def bind_path(path)
-          @templates[path.virtual] ||= begin
-            extension = @identifier.split('.', 2).last
+        def bind_path(path, prefix = nil)
+          @templates[virtual = File.join(*prefix, path.virtual)] ||= Template.new(
+            nil,
+            File.join(Rails.application.paths['app/views'].first, "#{virtual}.#{@extension}"),
+            @handler,
 
-            Template.new(
-              nil,
-              File.join(Rails.application.paths['app/views'].first, "#{path.virtual}.#{extension}"),
-              @handler,
+            format: @format,
+            variant: @variant,
+            virtual_path: virtual,
 
-              format: @format,
-              variant: @variant,
-              virtual_path: path.virtual,
-
-              locals: [],
-              template: self,
-            )
-          end
+            locals: [],
+            template: self,
+          )
         end
 
         def built_templates
@@ -83,11 +80,14 @@ module Torque
           end
 
           expected_locals.concat(context.request_locals_names.map(&:freeze)).freeze if expected_locals
-          "#{context.required_locals_annotation}\n#{buffer.to_s}"
+          save_source!("#{context.required_locals_annotation}\n#{buffer.to_s}", template)
         rescue ActionView::StrictLocalsError => e
           raise StrictLocalsError.new(e, template)
         ensure
           controller.instance_variable_set(:@_request, old_request)
+        end
+
+        def save_sources_on
         end
 
         private
@@ -107,6 +107,14 @@ module Torque
             ensure
               ActionView::Base.annotate_rendered_view_with_filenames = old_annotate
             end
+          end
+
+          def save_source!(source, template)
+            return source if (base = save_sources_on).blank?
+
+            FileUtils.mkdir_p(File.join(base, File.dirname(template.virtual_path)))
+            File.write(File.join(base, "#{template.virtual_path}.#{@extension}"), source)
+            source
           end
 
           def locals_code

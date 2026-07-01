@@ -25,12 +25,12 @@ module Torque
           self._template_ivars.freeze
         end
 
-        def append_template_path(path)
-          append_view_path(_build_template_path(path))
+        def append_template_path(path, prefix: nil)
+          append_view_path(_build_template_path(path, prefix))
         end
 
-        def prepend_template_path(path)
-          prepend_view_path(_build_template_path(path))
+        def prepend_template_path(path, prefix: nil)
+          prepend_view_path(_build_template_path(path, prefix))
         end
 
         protected
@@ -39,10 +39,10 @@ module Torque
             super(ActionView::PathSet.new(set.paths.sort_by { |path| path.is_a?(Resolver) ? 1 : -1 }))
           end
 
-          def _build_template_path(path)
+          def _build_template_path(path, prefix = nil)
             ActionView::PathRegistry.instance_exec do
               @file_system_resolver_mutex.synchronize do
-                @file_system_resolvers[path] ||= Resolver.new(path)
+                @file_system_resolvers[path] ||= Resolver.new(path, prefix)
               ensure
                 file_system_resolver_hooks.each(&:call)
               end
