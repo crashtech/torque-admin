@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require_relative 'application/default_config'
-require_relative 'application/lazy_modules'
 
 module Torque
   module Admin
@@ -51,9 +50,7 @@ module Torque
         @ui_builder = nil
         @base_controller = nil
         @engine.mounted = false
-        LazyModules::MODULES.each_key do |mod_name|
-          mod.send(:remove_const, mod_name) if mod.constants.include?(mod_name)
-        end
+        @mod.send(:clear_lazy_constants)
       end
 
       def finalize_routes!
@@ -132,7 +129,8 @@ module Torque
             Please remove it or choose a different name for your application.
           MSG
 
-          mod.extend(Application::LazyModules)
+          lazy_file = Pathname.new(__dir__).join('application', 'lazy_constants.rb')
+          mod.module_eval(lazy_file.read, lazy_file.to_s, 1)
           mod.define_singleton_method(:admin_application, &method(:itself))
 
           setup_hybrid_module(mod) if config.isolate_namespace.nil?

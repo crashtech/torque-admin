@@ -13,9 +13,7 @@ module Torque
       alias label_for action_label_for
       alias import_from_current_action import_items_from_current_action
 
-      def type
-        :breadcrumb
-      end
+      def type = :breadcrumb
 
       def element_settings
         super + %i[auto_dividers]

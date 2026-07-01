@@ -94,8 +94,12 @@ module Torque
             simple? ? 'simple_resource' : controller
           end
 
-          def actions_scope
-            "#{path}(/:#{param})"
+          def actions_scope(on = nil)
+            case on&.to_sym
+            when :collection then collection_scope
+            when :member then member_scope
+            else "#{path}(/:#{param})"
+            end
           end
         end
 
@@ -137,17 +141,17 @@ module Torque
           end
         end
 
-        def actions(*, **, &block)
+        def actions(*, on: nil, **, &block)
           raise ArgumentError, +"can't use actions outside resource(s) scope" unless parent_resource
 
           block = -> { action(*, **) } unless block_given?
-          block = block.then { |b| -> { path_scope(parent_resource.actions_scope, &b) } } unless resource_method_scope?
+          block = block.then { |b| -> { path_scope(parent_resource.actions_scope(on), &b) } } if !resource_method_scope?
           block = block.then { |b| -> { shallow_scope(&b) } } if shallow?
           with_scope_level(:action, &block)
         end
 
-        def action(*actions, view: false, add_alias: false, action: nil, via: :patch)
-          return actions(*actions, view:, add_alias:, action:, via:) unless action_scope?
+        def action(*actions, view: false, add_alias: false, action: nil, via: :patch, on: nil)
+          return actions(*actions, view:, add_alias:, action:, via:, on:) unless action_scope?
 
           annotate(type: :action) do
             actions.each do |name|
@@ -255,10 +259,8 @@ module Torque
 
             new { annotate(type: :action) { get(:new) } } if set.include?(:new)
 
-            actions do
-              action(*actions, add_alias: true) if actions
-              delete(:destroy) if set.include?(:destroy)
-            end
+            action(*actions, add_alias: true) if actions
+            action(:destroy, via: :delete) if set.include?(:destroy)
 
             member do
               annotate(type: :action) do

@@ -16,6 +16,7 @@ module Torque
     autoload :Engine
     autoload :Resource
 
+    autoload :LazyConstants
     autoload :CollectionState
 
     autoload_under :concerns do
@@ -55,6 +56,7 @@ module Torque
       app_autoload :BaseController
       app_autoload :SettingsController
       app_autoload :StreamController
+      app_autoload :PageActionsController
 
       app_autoload :ResourceController
       app_autoload :DashboardController
@@ -81,6 +83,7 @@ module Torque
 
       app_autoload :BaseElement
       app_autoload :MenuElement
+      app_autoload :ButtonsElement
       app_autoload :BreadcrumbElement
 
       app_autoload :ApplicationHelper

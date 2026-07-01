@@ -25,14 +25,14 @@ module Torque
           case input
           when NilClass, TrueClass
             # Do nothing for nil or true values
+          when FalseClass
+            raise Interrupt
           when Enumerable
             queue.concat(current)
           when Method
             queue.push(current.call)
           when Proc
             view_context.instance_exec(&current)
-          when FalseClass
-            raise Interrupt
           else
             queue.push(!!current)
           end

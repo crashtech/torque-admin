@@ -14,6 +14,10 @@ module Torque
       extend ActiveSupport::Concern
 
       included do
+        class_attribute :_template_ivars, instance_accessor: false, default: [].freeze
+        class_attribute :_template_prefixes, instance_accessor: false, default: [].freeze
+        private_class_method :_template_ivars=, :_template_prefixes=
+
         def _protected_ivars
           super + _template_ivars
         end
@@ -21,34 +25,9 @@ module Torque
       end
 
       class_methods do
-        def _template_ivars
-          defined?(@_template_ivars) ? @_template_ivars : [].freeze
-        end
-
-        def _template_ivars=(value)
-          @_template_ivars = value.freeze
-        end
-
-        def _template_prefixes
-          defined?(@_template_prefixes) ? @_template_prefixes : [].freeze
-        end
-
-        def _template_prefixes=(value)
-          @_template_prefixes = value.freeze
-        end
-
-        def _view_paths=(set)
-          super(ActionView::PathSet.new(set.paths.sort_by { |path| path.is_a?(Resolver) ? 1 : -1 }))
-        end
-
-        def _build_template_path(path)
-          ActionView::PathRegistry.instance_exec do
-            @file_system_resolver_mutex.synchronize do
-              @file_system_resolvers[path] ||= Resolver.new(path)
-            ensure
-              file_system_resolver_hooks.each(&:call)
-            end
-          end
+        def provide_template_ivars(*names)
+          self._template_ivars = (_template_ivars + names).uniq
+          self._template_ivars.freeze
         end
 
         def append_template_path(path)
@@ -58,6 +37,22 @@ module Torque
         def prepend_template_path(path)
           prepend_view_path(_build_template_path(path))
         end
+
+        protected
+
+          def _view_paths=(set)
+            super(ActionView::PathSet.new(set.paths.sort_by { |path| path.is_a?(Resolver) ? 1 : -1 }))
+          end
+
+          def _build_template_path(path)
+            ActionView::PathRegistry.instance_exec do
+              @file_system_resolver_mutex.synchronize do
+                @file_system_resolvers[path] ||= Resolver.new(path)
+              ensure
+                file_system_resolver_hooks.each(&:call)
+              end
+            end
+          end
       end
 
       def template_context_class

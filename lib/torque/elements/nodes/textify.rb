@@ -37,9 +37,9 @@ module Torque
           @options[option] ||= default.is_a?(String) ? default : begin
             raise ::I18n::MissingTranslationData unless defined?(@element)
 
-            values = { name: @element.send(:i18n_name), type: @type, id: @id.underscore }
+            values = { name: @element.send(:i18n_name), element_type: @element.type, type: @type, id: @id.underscore }
             keys = map_i18n_keys(option) { |key| format(key, values).to_sym }
-            ::I18n.translate(keys.shift, default: keys, raise: true)
+            ::I18n.translate(keys.shift, default: keys, raise: true, **@element.i18n_options)
           rescue ::I18n::MissingTranslationData
             text_for_fallback(default, option) if default.present?
           end

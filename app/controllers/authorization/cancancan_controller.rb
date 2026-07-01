@@ -35,6 +35,10 @@ module Torque
           super(**, attributes: attributes)
         end
 
+        def add_inferred_page_action(action_name, **)
+          super(action_name, **, if: -> { can?(action_name.to_sym, authorizable_resource) })
+        end
+
     end
   end
 end

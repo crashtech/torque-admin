@@ -31,22 +31,28 @@ module Torque
         result.map { |parts| parts.join(':') }.join(@separator)
       end
 
-      # TODO: For better performance, turn this into an iterative method instead of recursive
-      def each_value(input, prefix: '', &)
-        case input
-        when NilClass
-          # Do nothing for nil values
-        when Hash
-          input.each { |key, value| each_value(value, prefix: prefix + key.to_s + @nested_separator, &) }
-        when Enumerable
-          input.each { |value| each_value(value, prefix: prefix, &) }
-        when TrueClass, FalseClass
-          yield(prefix.chomp(@nested_separator), input) unless prefix.empty?
-        else
-          if prefix.empty?
-            split_string(input.to_s, &block)
+      def each_value(input, &)
+        stack = [[input, '']]
+
+        until stack.empty?
+          current, current_prefix = stack.pop
+
+          case current
+          when NilClass
+            # Do nothing for nil values
+          when Hash
+            current.reverse_each { |key, value| stack.push([value, current_prefix + key.to_s + @nested_separator]) }
+          when Enumerable
+            current.reverse_each { |value| stack.push([value, current_prefix]) }
+          when TrueClass, FalseClass
+            yield(current_prefix.chomp(@nested_separator), current) unless current_prefix.empty?
           else
-            yield(prefix.chomp(@nested_separator), input.to_s.strip)
+            str = current.to_s
+            if current_prefix.empty?
+              split_string(str, &)
+            else
+              yield(current_prefix.chomp(@nested_separator), str.strip)
+            end
           end
         end
       end

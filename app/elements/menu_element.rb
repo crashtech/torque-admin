@@ -28,9 +28,7 @@ module Torque
         end
       end
 
-      def type
-        :menu
-      end
+      def type = :menu
 
       def element_settings
         super + %i[sort icons dropdowns detect_current]
@@ -43,7 +41,12 @@ module Torque
         reindex(current, node_id("#{identifier}-container")) if current && !key?("#{identifier}-container")
 
         href, href_or_label = href_or_label, nil if href.nil?
-        add_node(identifier, :item, (Elements::LinkNode if href), label: href_or_label || identifier, href:, **, &)
+        icon = settings(:icons)&.[](identifier)
+
+        other = { label: href_or_label || identifier, href: }
+        other[:icon] = icon if icon
+
+        add_node(identifier, :item, (Elements::LinkNode if href), **other, **, &)
       end
 
       alias import_item item
@@ -77,12 +80,6 @@ module Torque
 
       def links
         index.each_value.select { |node| node.options[:href] }
-      end
-
-      def icons_helper
-        return @icons_helper if defined?(@icons_helper)
-
-        @icons_helper = build_settings_handler(:icons, :icon)
       end
 
     end

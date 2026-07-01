@@ -1,15 +1,7 @@
-<%= ui.body(:classic) do %>
+<%- settings = { class: ['classic', app_body_classes], style: { 'min-height' => '100svh' } } -%>
+<%= ui.rows('min-content', 'min-content', '1fr', 'min-content', as: :body, **settings) do %>
   <%= elements.main_menu(preset: :primary_horizontal, as: :header, prepend: app_banner) %>
-
-  <main class="ui fluid container" style="flex: 1; padding: 1rem 0;">
-    <%= elements.breadcrumb %>
-    <%= @page_title %>
-    <%= yield %>
-  </main>
-
-  <footer class="ui inverted vertical footer segment">
-    <div class="ui center aligned container">
-      &copy; Torque Admin <%= Date.current.year %>
-    </div>
-  </footer>
+  <%= app_page_banner %>
+  <%= app_page_content { yield } %>
+  <%= app_page_footer %>
 <% end %>

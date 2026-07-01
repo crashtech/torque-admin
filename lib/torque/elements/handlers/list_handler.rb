@@ -28,24 +28,30 @@ module Torque
         result.join(@separator)
       end
 
-      # TODO: For better performance, turn this into an iterative method instead of recursive
       def each_value(input, prefix: '', &)
-        case input
-        when NilClass
-          # Do nothing for nil values
-        when Hash
-          input.each { |key, value| each_value(value, prefix: prefix + key.to_s + @nested_separator, &) }
-        when Enumerable
-          input.each { |value| each_value(value, prefix: prefix, &) }
-        when TrueClass, FalseClass
-          yield(input, prefix.chomp(@nested_separator)) unless prefix.empty?
-        when Symbol
-          each_value(deref(input), prefix: prefix, &)
-        else
-          if (input = input.to_s).include?(@separator)
-            input.split(@separator).each { |value| yield("#{prefix}#{value}") }
-          elsif !input.empty?
-            yield("#{prefix}#{input}")
+        stack = [[input, prefix]]
+
+        until stack.empty?
+          current, current_prefix = stack.pop
+
+          case current
+          when NilClass
+            # Do nothing for nil values
+          when Hash
+            current.reverse_each { |key, value| stack.push([value, current_prefix + key.to_s + @nested_separator]) }
+          when Enumerable
+            current.reverse_each { |value| stack.push([value, current_prefix]) }
+          when TrueClass, FalseClass
+            yield(current, current_prefix.chomp(@nested_separator)) unless current_prefix.empty?
+          when Symbol
+            stack.push([deref(current), current_prefix])
+          else
+            str = current.to_s
+            if str.include?(@separator)
+              str.split(@separator).each { |value| yield("#{current_prefix}#{value}") }
+            elsif !str.empty?
+              yield("#{current_prefix}#{str}")
+            end
           end
         end
       end

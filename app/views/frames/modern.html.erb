@@ -1,20 +1,12 @@
-<%= ui.body(:modern) do %>
+<%- settings = { class: ['modern', app_body_classes], style: { 'min-height' => '100svh' } } -%>
+<%= ui.rows('min-content', '1fr', as: :body, gap: nil, **settings) do %>
   <%= elements.secondary_menu(preset: :secondary_horizontal, as: :header, prepend: app_banner) %>
-
-  <main style="flex: 1; display: flex;">
-    <%= elements.main_menu(preset: :primary_vertical, as: :section) %>
-
-    <div style="flex: 1; display: flex; flex-direction: column;">
-      <div style="flex: 1; padding: 2rem;">
-        <%= elements.breadcrumb %>
-        <%= yield %>
-      </div>
-
-      <footer class="ui vertical inverted footer segment">
-        <div class="ui center aligned container">
-          Copyright &copy; 2024
-        </div>
-      </footer>
-    </div>
-  </main>
+  <%= ui.columns('min-content', '1fr', gap: nil) do %>
+    <%= elements.main_menu(preset: :primary_vertical) %>
+    <%= ui.rows('min-content', '1fr', 'min-content', style: { 'padding-top' => ui.settings[:default_gap] }) do %>
+      <%= app_page_banner %>
+      <%= app_page_content { yield } %>
+      <%= app_page_footer %>
+    <% end %>
+  <% end %>
 <% end %>

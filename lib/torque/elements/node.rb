@@ -24,24 +24,21 @@ module Torque
       alias html_safe render
 
       append_render_handler do |node, element = nil, ui: Context.view_context.try(:ui)|
-        next if (name = ui&.element_helper_name(node, element&.type)).blank?
+        next if (names = ui&.node_render_names(node, element)).blank?
 
-        Rendering.attempted_render_handlers << "from helpers: `ui.#{name}`"
-        [:render_with_helper, ui.method(name)] if ui.respond_to?(name)
-      end
-
-      append_render_handler do |node, _element = nil, ui: Context.view_context.try(:ui)|
-        next if (name = ui&.element_helper_name(node)).blank?
-
-        Rendering.attempted_render_handlers << "from helpers: `ui.#{name}`"
-        [:render_with_helper, ui.method(name)] if ui.respond_to?(name)
+        names.find do |name|
+          Rendering.attempted_render_handlers << "from helpers: `ui.#{name}`"
+          break [:render_with_helper, ui.method(name)] if ui.respond_to?(name)
+        end
       end
 
       append_render_handler do |node, element = nil, base: Context.view_context|
-        next if (name = base&.element_helper_name(node, element&.type)).blank?
+        next if (names = base&.node_render_names(node, element)).blank?
 
-        Rendering.attempted_render_handlers << "from helpers: `#{name}`"
-        [:render_with_helper, base.method(name)] if base.respond_to?(name)
+        names.find do |name|
+          Rendering.attempted_render_handlers << "from helpers: `#{name}`"
+          break [:render_with_helper, base.method(name)] if base.respond_to?(name)
+        end
       end
 
       def initialize(id, type, parent = nil, **options)

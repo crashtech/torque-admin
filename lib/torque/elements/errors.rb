@@ -11,6 +11,9 @@ module Torque
     # Error when trying use an UI framework that is not yet available
     MissingFrameworkError = Class.new(::NameError)
 
+    # Error when trying access or render an element that is not found/not defined yet
+    NotFound = Class.new(KeyError)
+
     # Error when executing a template with invalid locals
     StrictLocalsError = Class.new(ActionView::StrictLocalsError) do
       def initialize(argument_error, template)

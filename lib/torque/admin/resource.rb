@@ -21,7 +21,7 @@ module Torque
         @sections = Set.new
         @controllers = Set.new
         @widgets = { collection: Set.new, member: Set.new }
-        @actions = { collection: Set.new, member: Set.new }
+        @actions = { batch: Set.new, collection: Set.new, member: Set.new }
       end
 
       def enhance_from_route(scope, action_name)
@@ -31,11 +31,11 @@ module Torque
 
         return if (type = scope.annotation(:type)).nil?
 
+        parent = scope[:scope_level_resource]
         list = type == :widget ? @widgets : @actions
-        if scope.scope_level == :action
-          list[:member] << action_name
-          list[:collection] << action_name
-        elsif scope.scope_level == :new || scope.scope_level == :collection
+        if scope[:path].end_with?(parent.actions_scope)
+          list[:batch] << action_name
+        elsif scope.scope_level == :new || scope[:path].end_with?(parent.collection_scope)
           list[:collection] << action_name
         else
           list[:member] << action_name

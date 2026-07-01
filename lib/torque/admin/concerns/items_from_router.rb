@@ -58,7 +58,7 @@ module Torque
       protected
 
         def import_from_router_sections
-          view_context.try(:ui).try(:menu_sections_for, name)
+          view_context.app_menu_sections_for(name)
         end
 
         def skip_import_route?(route, section, actions, authenticated_only, sources, filter_sections)

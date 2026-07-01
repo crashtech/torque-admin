@@ -29,6 +29,7 @@ module Torque
       end
 
       include StreamController
+      include PageActionsController
 
       include CollectionController
       include MemberController
@@ -130,6 +131,14 @@ module Torque
 
         def fallback_authorization_action
           (request.get? && (processing_member_action? && :show || :index)) || super
+        end
+
+        def add_page_action(action_name, href = nil, **)
+          return super unless href.nil? || !processing_member_action?
+          return super unless admin_resource.actions[:batch].include?(action_name.to_s)
+
+          href = relative_path_for(action_name, self.class.primary_param => params[self.class.primary_param])
+          super(action_name, href, **)
         end
     end
   end

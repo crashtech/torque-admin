@@ -1,10 +1,25 @@
 ---
 en:
   torque_admin:
+    buttons:
+      search: "Search"
+      preview: "Preview"
+
+      show: "View"
+      edit: "Edit"
+      destroy: "Delete"
+
+      new: "New %{singular}"
+      create: "Create %{singular}"
+      update: "Update %{singular}"
+
+      more: "More"
+
     dashboard_controller:
       index:
         title: "Dashboard"
         breadcrumb: "%{name}"
+
     resource_controller:
       index:
         title: "%{plural}"

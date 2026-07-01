@@ -3,12 +3,16 @@
 define :button do |b|
   b.preset(:default, as: 'button', class: 'ui button')
   b.preset(:multiple, as: 'div', class: { button: false, buttons: true })
+  b.preset(:primary, class: 'primary')
+  b.preset(:danger, class: 'negative')
 
   b.imports(:icon, :size, :color)
 
-  b.property(:label).calls(:label).adds_to_content(:after)
+  b.property(:label).adds_to_content(:append)
+  b.property(:badge).calls(:badge).adds_to_content(:append)
 
-  b.toggles(:basic, :tertiary, :inverted, :loading, :active, :compact, :toggle, :positive, :negative, :fluid, :circular)
+  b.toggles(:primary, :secondary, :inverted, :tertiary, :positive, :negative)
+  b.toggles(:basic, :loading, :active, :compact, :toggle, :fluid, :circular)
   b.property(:disabled).applies(class: 'disabled', disabled: true)
 
   b.property(:floated).maps(false, true => 'left').formats(:class, '%s floated')

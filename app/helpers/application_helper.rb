@@ -18,6 +18,10 @@ module Torque
         admin_application.config.title || 'Torque Admin'
       end
 
+      def app_base_footer
+        "&copy; #{Time.current.year} #{app_base_title}. All rights reserved.".html_safe
+      end
+
       def app_page_title
         @page_title ||= controller.implicit_page_title
       end
@@ -31,8 +35,19 @@ module Torque
         ui.application_banner(safe_join(content), **)
       end
 
-      def app_page_banner(title: app_page_title, breadcrumbs: true, actions: true)
+      def app_page_banner(title: app_page_title, description: true, breadcrumbs: true, actions: true, **)
+        breadcrumbs = elements.breadcrumb.html_safe if TrueClass === breadcrumbs
+        actions = content_for(:page_actions) if TrueClass === actions
+        description = app_translate(:description, default: '') if TrueClass === description
+        ui.page_banner(title, description, breadcrumbs, actions, **)
+      end
 
+      def app_page_content(**, &)
+        ui.page_content(**, &)
+      end
+
+      def app_page_footer(content = app_base_footer, **)
+        ui.page_footer(content, **)
       end
 
       def app_body_classes
@@ -46,6 +61,10 @@ module Torque
 
       def app_controller_class_name
         controller.admin_controller_name(namespace: '--') << '-controller'
+      end
+
+      def app_menu_sections_for(...)
+        ui.menu_sections_for(...)
       end
 
       def app_translate(key, action: controller.action_name, default: nil, **)

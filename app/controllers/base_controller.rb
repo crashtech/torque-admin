@@ -30,9 +30,9 @@ module Torque
 
         before_action :assign_page_title
 
-        main_menu { |e| e.import_from_routes }
-        secondary_menu { |e| e.import_from_sections }
-        breadcrumb { |e| e.import_from_current_action }
+        main_menu { import_from_routes }
+        secondary_menu { import_from_sections }
+        breadcrumb { import_from_current_action }
       end
 
       class_methods do
@@ -111,6 +111,7 @@ module Torque
           "#{admin_application.name}.%<name>s.%<id>s",
           '%<name>s.%<type>s.%<id>s',
           '%<name>s.%<id>s',
+          'torque_admin.%<element_type>s.%<id>s',
         ]
       end
 
@@ -158,14 +159,12 @@ module Torque
           end
         end
 
-        # TODO: These two methods don't add too much value in general
-
-        def relative_path_for(action)
-          url_for(action:, only_path: true)
+        def relative_path_for(action, **)
+          url_for(**, action:, only_path: true)
         end
 
-        def relative_url_for(action)
-          url_for(action:)
+        def relative_url_for(action, **)
+          url_for(**, action:)
         end
 
         def i18n_default_scopes

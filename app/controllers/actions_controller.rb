@@ -13,6 +13,7 @@ module Torque
       # Other good example is preparing to perform an action that can be batched or not. So for example, if there is a
       # `publish` action, we can have a generic handler that will execute a block and upon a successful execution,
       # it will properly respond to the request
+
     end
   end
 end

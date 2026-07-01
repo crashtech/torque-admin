@@ -2,8 +2,6 @@
 
 module Torque
   module Elements
-    NotFound = Class.new(KeyError)
-
     # = Torque Elements \Registry
     class Registry
       def initialize(controller)

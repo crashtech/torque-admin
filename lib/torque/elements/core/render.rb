@@ -30,8 +30,9 @@ module Torque
         end
 
         def render_in(view_context = Context.view_context, &)
+          load_config! unless block_given?
           with_rendering_context(view_context) do
-            block_given? ? load(&) : load_config!
+            load(&) if block_given?
             root.render!(outer: render_content_only?)
           end
         end

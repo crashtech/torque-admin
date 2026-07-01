@@ -11,7 +11,7 @@ module Torque
         class_attribute :element_aliases, instance_accessor: false, instance_predicate: false, default: {}.freeze
         private_class_method :element_settings=, :element_aliases=
 
-        helper_method :element_helper_name, :element_class_for, :element_class_name, :elements_i18n_keys_for
+        helper_method :node_render_names, :element_class_for, :element_class_name, :elements_i18n_keys_for
         delegate :element_class_name, :element_class_for, to: :class
       end
 
@@ -62,10 +62,11 @@ module Torque
           end
       end
 
-      def element_helper_name(node, base_type = nil)
-        return if base_type.nil? && node =~ :root
+      def node_render_names(node, element = nil)
+        return unless element
+        return [-"render_#{element.name}"] if node =~ :root
 
-        -[:render, *base_type.presence, *(node.type unless node =~ :root)].join('_')
+        [-"render_#{element.name}_#{node.type}", -"render_#{element.type}_#{node.type}"]
       end
 
       def elements_i18n_keys_for(*)
