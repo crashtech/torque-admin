@@ -3,8 +3,6 @@
 define :button do |b|
   b.preset(:default, as: 'button', class: 'ui button')
   b.preset(:multiple, as: 'div', class: { button: false, buttons: true })
-  b.preset(:primary, class: 'primary')
-  b.preset(:danger, class: 'negative')
 
   b.imports(:icon, :size, :color)
 

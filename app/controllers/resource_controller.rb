@@ -137,6 +137,7 @@ module Torque
           return super unless href.nil? || !processing_member_action?
           return super unless admin_resource.actions[:batch].include?(action_name.to_s)
 
+          # TODO: Don't use relative path, just forward the hash for template handling
           href = relative_path_for(action_name, self.class.primary_param => params[self.class.primary_param])
           super(action_name, href, **)
         end

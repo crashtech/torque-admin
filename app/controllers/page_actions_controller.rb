@@ -9,7 +9,6 @@ module Torque
 
       included do
         provide_template_ivars :@page_actions
-
         before_action :assign_page_actions
       end
 
@@ -47,6 +46,7 @@ module Torque
         end
 
         def add_page_action(action_name, href = nil, **)
+          # TODO: Don't use relative path, just forward the hash for template handling
           @page_actions.item(action_name.to_sym, href || relative_path_for(action_name), **)
         end
     end

@@ -17,11 +17,6 @@ module Torque
         class_attribute :_template_ivars, instance_accessor: false, default: [].freeze
         class_attribute :_template_prefixes, instance_accessor: false, default: [].freeze
         private_class_method :_template_ivars=, :_template_prefixes=
-
-        def _protected_ivars
-          super + _template_ivars
-        end
-        private :_protected_ivars
       end
 
       class_methods do

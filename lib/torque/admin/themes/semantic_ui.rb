@@ -13,6 +13,10 @@ module Torque
               secondary_horizontal: { class: 'large', style: { margin: 0, border_radius: 0 } },
               primary_vertical: { class: 'inverted left vertical', style: { margin: 0, border_radius: 0 } },
             },
+            button: {
+              primary: { class: 'primary' },
+              danger: { class: 'negative' },
+            }
           }
         end
 

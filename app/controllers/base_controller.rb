@@ -153,7 +153,11 @@ module Torque
 
         def initialized_side_controllers
           @_initialized_side_controllers ||= Hash.new do |hash, name|
-            hash[name] = instance = name.to_s.camelize.constantize.allocate
+            name = name.to_s.camelize
+            name << 'Controller' unless name.end_with?('Controller')
+            next hash[name] if hash.key?(name)
+
+            hash[name] = instance = name.constantize.allocate
             instance.send(:initialize_as_slave_of, self) if instance.respond_to?(:initialize_as_slave_of, true)
             instance
           end
