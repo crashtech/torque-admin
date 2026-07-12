@@ -38,13 +38,24 @@ module Torque
         current
       end
 
-      def change(element, node = :root, **changes)
-        return if changes.empty? || (id = node_id(node)).nil?
+      def change(element, node = :root, options = nil, **changes)
+        element = element.name if element.is_a?(Base)
+        return if (options ||= changes).empty? || (id = node_id(node)).nil?
 
         @changes ||= {}
         @changes[element] ||= {}
         @changes[element][id] ||= []
-        @changes[element][id] << changes
+        @changes[element][id] << options
+      end
+
+      def deep_extract_properties(property_list, *inputs)
+        while inputs.any?
+          next if (input = inputs.pop).blank?
+
+          append = input['@append']
+          inputs.push(*append.reverse) if append.present?
+          yield(input.extract!(*property_list), input)
+        end
       end
     end
   end

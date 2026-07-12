@@ -5,6 +5,8 @@ module Torque
     module Helpers
       module Template
         module LocalsHelper
+          NULL = Object.new.freeze
+
           def expect_any_locals!(as: :kwargs)
             @required_locals[:kwargs] = as.to_s
           end
@@ -13,9 +15,9 @@ module Torque
             @required_locals[:block] = as.to_s
           end
 
-          def require_argument!(name, default_as_str = nil, default: nil)
+          def require_argument!(name, default_as_str = nil, default: NULL)
             name = name.to_s
-            default_as_str ||= default.inspect
+            default_as_str ||= default.inspect if default != NULL
 
             redefinition = @required_locals.key?(name) && @required_locals[name] != default_as_str
             raise ArgumentError, "Local #{name} is already required with a different default value" if redefinition

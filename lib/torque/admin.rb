@@ -9,6 +9,7 @@ module Torque
   # = Torque Admin
   module Admin
     APP_DIR = Pathname.new(__dir__).join('../../app').freeze
+    NOOP = ->(*) { }.freeze
 
     extend ActiveSupport::Autoload
 
@@ -70,7 +71,7 @@ module Torque
       app_autoload :AuthorizationController, 'authorization'
 
       app_autoload :FilterController, 'collection'
-      app_autoload :ScopeController, 'collection'
+      app_autoload :ScopesController, 'collection'
       app_autoload :SortController, 'collection'
       app_autoload :PaginationController, 'collection'
 
@@ -82,9 +83,10 @@ module Torque
       app_autoload :WidgetsController
 
       app_autoload :BaseElement
-      app_autoload :MenuElement
       app_autoload :ButtonsElement
       app_autoload :BreadcrumbElement
+      app_autoload :MenuElement
+      app_autoload :TableElement
 
       app_autoload :ApplicationHelper
     end

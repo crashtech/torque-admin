@@ -20,6 +20,7 @@ module Torque
 
     autoload :Component
 
+    autoload :Accessors
     autoload :Context
     autoload :Helpers
     autoload :UiBuilder
@@ -35,6 +36,7 @@ module Torque
     end
 
     autoload_under :nodes do
+      autoload :ColumnNode
       autoload :LinkNode
     end
 
@@ -44,8 +46,17 @@ module Torque
     end
 
     class << self
+      def debug_templates!(path = Rails.root.join('tmp', 'templates'))
+        Templates::UnboundTemplate.redefine_method(:save_sources_on) { path }
+      end
+
       def logger
         ActionView::Base.logger
+      end
+
+      def current_template_line
+        template = Context.view_context.instance_variable_get(:@current_template)
+        caller.lazy.grep(Regexp.new(template.identifier)).first[/:(\d+):/, 1].to_i
       end
 
       def node_id(value)

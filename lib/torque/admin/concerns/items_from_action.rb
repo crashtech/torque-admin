@@ -48,13 +48,14 @@ module Torque
             view_context.controller.instance_variable_get(:@_chained_members).each do |controller, member|
               resource_name = controller.implicit_resource_title_for(member)
               options = controller.send(:i18n_default_option, resource_name:)
+              resource = controller.admin_resource
               name = controller.controller_name
 
               label = action_label_for(:index, controller:, options:)
-              import_item(options[:plural], label, { controller: name, action: :index })
+              import_item(resource.plural_key, label, { controller: name, action: :index })
 
               label = action_label_for(:show, controller:, options:)
-              import_item(options[:singular], label, { controller: name, action: :show, id: member.id })
+              import_item(resource.singular_key, label, { controller: name, action: :show, id: member.id })
             end
           end
 

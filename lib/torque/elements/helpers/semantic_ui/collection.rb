@@ -37,3 +37,20 @@ define :breadcrumb do |b|
 end
 
 associate :breadcrumb_item, to: :menu_item
+
+define :table do |b|
+  b.preset(:default, as: 'table', class: 'ui table')
+
+  b.toggles(:celled, :structured, :definition, :fixed, :unstackable, :stackable, :selectable, :striped, :basic)
+  b.toggles(:collapsing, :inverted, :sortable, :padded, :compact)
+
+  b.property(:very_basic).applies(class: 'very basic')
+  b.property(:very_padded).applies(class: 'very padded')
+  b.property(:very_compact).applies(class: 'very compact')
+  b.property(:single_line).applies(class: 'single line')
+
+  b.property(:aligned).maps(false, true => 'left').formats(:class, '%s aligned')
+  b.property(:scrolling).maps(true => '', long: 'long', very_long: 'very long', short: 'short', very_short: 'very short').formats(:class, '%s scrolling')
+
+  b.imports(:size, :color)
+end

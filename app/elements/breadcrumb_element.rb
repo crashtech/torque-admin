@@ -32,18 +32,22 @@ module Torque
         item(:section, label, { controller: "#{section}_dashboard", action: :index })
       end
 
-      def item(identifier, href_or_label = nil, href = nil, **, &)
+      def item(identifier, href_or_label = nil, href = nil, **options, &)
         divider if children.any? && auto_dividers?
 
         href, href_or_label = href_or_label, nil if href.nil?
         href_or_label = label_for(href[:action], controller: href[:controller]) if href_or_label == true
-        add_node(identifier, :item, (Elements::LinkNode if href), label: href_or_label || identifier, href:, **, &)
+
+        options[:href] ||= href
+        options[:label] ||= href_or_label || identifier
+
+        add_node(identifier, :item, options, node_type: (:link if options[:href]), &)
       end
 
       alias import_item item
 
       def divider(content = nil)
-        add_node(nil, :divider, prepend: content || divider_content || '/')
+        add_node(nil, :divider, { prepend: content || divider_content || '/' })
       end
 
       def pop

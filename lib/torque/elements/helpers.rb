@@ -36,9 +36,21 @@ module Torque
         Context.registry || Registry.new(controller)
       end
 
+      def template_render_context?
+        false
+      end
+
+      def safe_dom_id(record, *)
+        return dom_id(record, *) if record.respond_to?(:to_model)
+
+        id = record[:id] || record['id'] || record.object_id
+        key = controller.try(:admin_resource)&.singular_key
+        [*key, id].join('_')
+      end
+
       ## Helpers for changing element-based content and options
 
-      def append_changes_to(element, node = :root, options = nil)
+      def append_changes_to(element, node = :root, **options)
         Context.change(element, node, options)
       end
 
@@ -58,18 +70,6 @@ module Torque
         MSG
 
         Context.change(element, node, { at.to_sym => { render: file, ** } })
-      end
-
-      ## Essential for elements template rendering
-
-      def _run_under(buffer, template)
-        _old_output_buffer, _old_virtual_path, _old_template = @output_buffer, @virtual_path, @current_template
-        @current_template = template
-        @virtual_path = template.virtual_path
-        @output_buffer = buffer
-        yield self
-      ensure
-        @output_buffer, @virtual_path, @current_template = _old_output_buffer, _old_virtual_path, _old_template
       end
 
       private

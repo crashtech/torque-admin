@@ -47,7 +47,7 @@ module Torque
           self
         ensure
           @interface.__setobj__(nil)
-          @current = @interface = nil
+          @current = nil
         end
 
         def type
@@ -93,16 +93,14 @@ module Torque
             build_node(@name, :root, args.grep(Symbol).product([true]).to_h.merge(options))
           end
 
-          def build_node(id, type, options = nil, parent: @current || @root || self, node_type: Node)
+          def build_node(id, type, options = nil, node_type: Node)
             klass = node_type.is_a?(Class) && node_type <= Node ? node_type : Node::CLASS_TYPES[node_type]&.constantize
             raise ArgumentError, "Invalid node type: #{node_type}" if klass.nil?
 
-            instance = klass.new(node_id(id), type, parent, **options)
-            instance.instance_variable_set(:@element, self)
-            instance
+            klass.new(node_id(id), type, **options, :@element => self)
           end
 
-          def add_node(id, type, node_type = nil, **options, &)
+          def add_node(id, type, options = nil, node_type: nil, &)
             node = build_node(id, type, options, node_type: node_type || Node)
             add_node!(node)
             nest_content(node, &) if block_given?

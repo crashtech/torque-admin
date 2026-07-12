@@ -28,6 +28,27 @@ module Torque
           @_request = nil
         end
 
+        def view_cache_dependencies
+          [].freeze
+        end
+
+        def template_render_context?
+          true
+        end
+
+        def process_table_body(element)
+          current = element.accessors.define_ivar(:current)
+          name = -element.settings(:as, :table).to_s
+
+          source = +''
+          source << "<%- #{name}.entries.each do |entry| -%>"
+          source << "<%- #{current} = entry -%>"
+          source << "<%= #{name}.row(entry) { content_tag(:td, entry.id) } -%>"
+          source << '<%- end -%>'
+
+          element.body(source.html_safe).render!
+        end
+
         def inspect
           "#<#{self.class.name}#{'%#016x' % (object_id << 1)}>"
         end

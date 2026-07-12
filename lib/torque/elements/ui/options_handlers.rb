@@ -55,12 +55,13 @@ module Torque
         end
 
         def split_options_properties(source, property_list, preset_list = nil, kwargs = {})
-          properties = {}.with_indifferent_access
-          options = (fetch_presets(:default, *preset_list, from: source) << kwargs).each_with_object({}) do |input, result|
-            next if input.blank?
+          inputs = [kwargs, *fetch_presets(:default, *preset_list, from: source).reverse]
+          properties = {}
+          options = {}
 
-            properties.merge!(input.extract!(*property_list))
-            flatten_options!(input) { |key, value| combine_option(key, result, value) }
+          Context.deep_extract_properties(property_list, *inputs) do |props, opts|
+            flatten_options!(opts) { |key, value| combine_option(key, options, value) }
+            properties.merge!(props) if props.present?
           end
 
           [options, properties]

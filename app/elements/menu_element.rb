@@ -36,29 +36,24 @@ module Torque
 
       ## Define nodes
 
-      def item(identifier, href_or_label = nil, href = nil, **, &)
+      def item(identifier, href_or_label = nil, href = nil, **options, &)
         current = self[identifier]
         reindex(current, node_id("#{identifier}-container")) if current && !key?("#{identifier}-container")
 
         href, href_or_label = href_or_label, nil if href.nil?
         icon = settings(:icons)&.[](identifier)
 
-        other = { label: href_or_label || identifier, href: }
-        other[:icon] = icon if icon
+        options[:href] ||= href
+        options[:label] ||= href_or_label || identifier
+        options[:icon] ||= icon if icon
 
-        add_node(identifier, :item, (Elements::LinkNode if href), **other, **, &)
+        add_node(identifier, :item, options, node_type: (:link if options[:href]), &)
       end
 
       alias import_item item
 
       def divider
         add_node(nil, :divider)
-      end
-
-      ## Renderer
-
-      def fallback_text_for(key, value, node)
-        value.to_s.underscore.titleize if node =~ :item && key == :label
       end
 
       ## Overrides
@@ -76,10 +71,14 @@ module Torque
         result
       end
 
+      def fallback_text_for(key, value, node)
+        value.to_s.underscore.titleize if node =~ :item && key == :label
+      end
+
       ## Others
 
       def links
-        index.each_value.select { |node| node.options[:href] }
+        index.each_value.select { |node| node.is_a?(Elements::LinkNode) }
       end
 
     end

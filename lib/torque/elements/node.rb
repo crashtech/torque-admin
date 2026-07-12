@@ -9,9 +9,11 @@ module Torque
     class Node
       CLASS_TYPES = {
         link: 'Torque::Elements::LinkNode',
+        column: 'Torque::Elements::ColumnNode',
       }
 
-      attr_reader :id, :type, :parent, :options
+      attr_reader :id, :type, :options
+      attr_accessor :parent
 
       delegate :[], :[]=, to: :options
       delegate :tag, to: '::Torque::Elements::Context.view_context'
@@ -41,13 +43,11 @@ module Torque
         end
       end
 
-      def initialize(id, type, parent = nil, **options)
-        element, parent = parent, nil if parent.is_a?(Base)
-        element ||= parent&.instance_variable_get(:@element)
-
+      def initialize(id, type, **options)
         @id = id
         @type = type.to_sym
-        @parent = parent
+
+        element = options.delete(:@element)
         @element = element if element
 
         extract_settings(options)
@@ -94,6 +94,10 @@ module Torque
 
       def of_type?(value)
         type == value.to_sym
+      end
+
+      def fetch_setting(key, default = nil)
+        defined?(@settings) ? @settings.fetch(key, default) : default
       end
 
       alias =~ of_type?

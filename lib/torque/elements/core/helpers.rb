@@ -8,7 +8,7 @@ module Torque
         extend ActiveSupport::Concern
 
         def settings(key = nil, default = nil)
-          (hash = @root.settings).nil? ? default : (key.nil? ? hash : hash.fetch(key, default))
+          key.nil? ? @root.settings : @root.fetch_setting(key, default)
         end
 
         def settings?(key)
@@ -16,7 +16,11 @@ module Torque
         end
 
         def change_setting(key, value)
-          @root.settings&.[]=(key, value) || @root.instance_variable_set(:@settings, { key => value })
+          if @root.settings
+            @root.settings[key] = value
+          else
+            @root.instance_variable_set(:@settings, { key => value })
+          end
         end
 
         def element_settings

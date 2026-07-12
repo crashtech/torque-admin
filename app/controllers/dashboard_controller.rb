@@ -33,7 +33,9 @@ module Torque
           self.class.name.gsub(/\A(?:#{"#{admin_application.mod.name}::"})?(.*?)(?:Dashboard)?Controller\z/, '\1')
         end
 
-        alias_method :authorizable_resource, :dashboard_name
+        def authorizable_resource
+          admin_controller_name
+        end
 
         def i18n_default_option
           (super || {}).merge(name: dashboard_name.tr('/', ' ').titleize)

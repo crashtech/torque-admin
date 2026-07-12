@@ -42,10 +42,12 @@ module Torque
 
       private
 
-        def compile_content(content)
+        def compile_content(source)
           @file = Tempfile.new(["#{name.demodulize.underscore}_helpers", '.rb'])
-          @file.write(source = "# frozen_string_literal: true\n#{content}")
-          module_eval(content, @file.path, 2)
+          @file.write(content = "# frozen_string_literal: true\n#{source}")
+          module_eval(content, @file.path, 1)
+        ensure
+          @file.close
         end
 
         def self.extended(base)

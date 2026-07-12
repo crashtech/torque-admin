@@ -12,19 +12,20 @@ module Torque
 
       ## Define nodes
 
-      def group(identifier, label = nil, **, &)
-        add_node(identifier, :group, label: label || identifier, **, &)
+      def group(identifier, label = nil, **options, &)
+        add_node(identifier, :group, options.reverse_merge(label: label || identifier), &)
       end
 
-      def item(identifier, href_or_label, href = nil, **, &)
+      def item(identifier, href_or_label, href = nil, **options, &)
         href, href_or_label = href_or_label, nil if href.nil?
         icon = settings(:icons)&.[](identifier)
 
-        other = { as: 'a', href: }
-        other[:label] = href_or_label || identifier unless icons_only?
-        other[:icon] = icon if icon
+        options[:as] ||= 'a'
+        options[:href] ||= href
+        options[:icon] ||= icon if icon
+        options[:label] ||= href_or_label || identifier unless icons_only?
 
-        add_node(identifier, :button, Elements::LinkNode, **other, **, &)
+        add_node(identifier, :button, options, node_type: :link, &)
       end
 
       alias button item

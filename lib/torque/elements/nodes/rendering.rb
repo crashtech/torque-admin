@@ -62,8 +62,13 @@ module Torque
           # Override this method adding a @render_args to store positional arguments for rendering
         end
 
-        def apply_context_changes
-          Context.apply_changes(@element.name, id, @options) if defined?(@element) && @element&.name
+        def apply_context_changes(as = id)
+          return unless defined?(@element) && @element&.name
+
+          Context.apply_changes(@element.name, as, @options)
+          Context.deep_extract_properties(settings_keys, @options) do |props, _|
+            merge_settings(props) if props.present?
+          end
         end
 
         def content
@@ -74,6 +79,9 @@ module Torque
             node.content = content
             node.render!
           end
+
+          return @content unless type == :root && defined?(@element)
+          @content = @element.finalize_content_body(@content)
         end
 
         def render!(**)
@@ -91,23 +99,17 @@ module Torque
           args = @render_args if defined?(@render_args)
 
           handler, *settings = defined?(@element) ? @element.render_handler_for(self) : render_handler
-          raise <<~MESSAGE unless handler
-            No render handler found for node '#{id}' of type '#{type}'
-            #{"From '#{@element.name}' element" if defined?(@element)}
-            Attempted:
-              #{Rendering.attempted_render_handlers.join(",\n  ")}
-          MESSAGE
+          return handler.call(*args, body, **options) if handler&.respond_to?(:call)
+          return send(handler, args, body, options, *settings) if handler
 
-          return handler.call(*args, content, **options) unless handler.is_a?(Symbol)
-
-          send(handler, args, body, options, *settings)
+          missing_handler!
         end
 
         protected
 
           def sanitized_options!
-            extract_render_args
             apply_context_changes
+            extract_render_args
           end
 
           def render_handler
@@ -118,10 +120,28 @@ module Torque
             helper_method.call(*args, content, **options, :@node => self)
           end
 
+          def merge_settings(values)
+            (@settings ||= {}).merge!(settings)
+          end
+
           def extract_settings(options)
-            keys = @type == :root ? @element&.element_settings : self.class.settings
-            values = options.extract!(*Core::Nodes::POSITION_OPTIONS, *keys)
+            values = options.extract!(*Core::Nodes::POSITION_OPTIONS, *settings_keys)
             @settings = values if values.present?
+          end
+
+          def settings_keys
+            type == :root && defined?(@element) ? @element.element_settings : self.class.settings
+          end
+
+        private
+
+          def missing_handler!
+            raise <<~MESSAGE
+              No render handler found for node '#{id}' of type '#{type}'
+              #{"From '#{@element.name}' element" if defined?(@element)}
+              Attempted:
+                #{Rendering.attempted_render_handlers.join(",\n  ")}
+            MESSAGE
           end
       end
     end

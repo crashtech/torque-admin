@@ -25,6 +25,7 @@ module Torque
         helper Admin::ApplicationHelper
         helper_method :ui_framework, :relative_path_for, :relative_url_for, :route_annotation, :implicit_page_title_for
 
+        provide_template_ivars :@primary_element
         layout admin_application.name.to_s
         frame 'classic'
 
@@ -88,11 +89,11 @@ module Torque
             end
           end
 
-          def generated_handlers_module
-            @generated_handlers_module ||= begin
+          def generated_actions_module
+            @generated_actions_module ||= begin
               mod = Module.new
-              const_set(:GeneratedHandlers, mod)
-              private_constant :GeneratedHandlers
+              const_set(:GeneratedActions, mod)
+              private_constant :GeneratedActions
               include(mod)
               mod
             end
@@ -126,7 +127,7 @@ module Torque
       protected
 
         def assign_page_title
-          @page_title = implicit_page_title
+          @page_title ||= implicit_page_title
         end
 
         def route_annotations

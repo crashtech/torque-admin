@@ -7,12 +7,12 @@ module Torque
 
       protected
 
-        def load_collection(s, state, paginate: default_pagination_settings, **)
-          s = paginate_collection(s, state, paginate) if paginate
-          super(s, state, **)
+        def load_collection(scope, state, paginate: default_pagination_settings, **)
+          scope = apply_collection_pagination(scope, state, paginate) if paginate
+          defined?(super) ? super(scope, state, **) : scope
         end
 
-        def paginate_collection(scope, state, settings)
+        def apply_collection_pagination(scope, state, settings)
           scope
         end
 

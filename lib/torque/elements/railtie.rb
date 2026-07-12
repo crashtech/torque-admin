@@ -15,12 +15,6 @@ module Torque
     class Railtie < ::Rails::Railtie
       config.eager_load_namespaces << Torque::Elements
 
-      initializer 'torque-elements.debug_templates' do
-        if Rails.env.local?
-          Templates::UnboundTemplate.redefine_method(:save_sources_on) { Rails.root.join('tmp', 'templates') }
-        end
-      end
-
       initializer 'torque-elements.default_attributes' do
         Elements.define_attribute('@content', ContentHandler.new)
 

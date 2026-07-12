@@ -6,7 +6,7 @@ module Torque
   module Admin
     # = Torque Admin \Resource
     class Resource
-      include ActiveModel
+      prepend ActiveModel
 
       delegate :admin_application, to: 'self.class.module_parent'
 

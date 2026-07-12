@@ -38,7 +38,7 @@ module Torque
         protected
 
           def append_node(node, options = node.settings)
-            add_on_position(node, options) || (@current&.children || children) << node
+            add_on_position(node, options) || add_on_position!(node)
           end
 
           def shift_node(node)
@@ -60,15 +60,20 @@ module Torque
 
         private
 
-          def add_on_position!(node, ref, operation)
+          def add_on_position!(node, ref = @current || root, operation = :append_to)
             case operation
-            when :prepend_to then ref.children.unshift(node)
-            when :append_to then ref.children.push(node)
-            when :insert_before, :insert_after
-              add = operation == :insert_after ? 1 : 0
-              parent = ref.parent&.children || children
-              parent.insert(parent.index(ref) + add, node)
+            when :prepend_to then (parent = ref).children.unshift(node)
+            when :append_to then (parent = ref).children.push(node)
+            when :insert_before
+              nodes = (parent = ref.parent || root).children
+              nodes.insert(nodes.index(ref), node)
+            when :insert_after
+              nodes = (parent = ref.parent || root).children
+              nodes.insert(nodes.index(ref) + 1, node)
             end
+
+            node.instance_variable_set(:@element, self)
+            node.instance_variable_set(:@parent, parent)
           end
       end
     end

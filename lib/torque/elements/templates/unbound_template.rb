@@ -33,7 +33,7 @@ module Torque
         end
 
         def bind_path(path, prefix = nil)
-          @templates[virtual = File.join(*prefix, path.virtual)] ||= Template.new(
+          @templates[virtual = File.join(*prefix, path)] ||= Template.new(
             nil,
             File.join(Rails.application.paths['app/views'].first, "#{virtual}.#{@extension}"),
             @handler,
@@ -64,18 +64,14 @@ module Torque
         end
 
         def build_source(view, template, expected_locals = nil)
-          controller = view.controller
-          context = controller.template_context
-
-          # Temporarily remove the request, because it is not supposed to be accessed during building a template
-          # TODO: This is likely to change to a better management way of inaccessible things
-          old_request = controller.request
-          controller.instance_variable_set(:@_request, nil)
+          controller = view.controller.class.allocate
+          context = controller.template_context(view.controller.template_assigns)
 
           compile!(context)
           buffer = ActionView::OutputBuffer.new
-          controller.view_context._run_under(buffer, self) do |view_context|
-            context.instance_variable_set(:@view_context, view_context)
+          Context.with(view_context: context) do
+            context.instance_variable_set(:@rendering_template, template)
+            context.instance_variable_set(:@view_context, controller.view_context)
             context._run(method_name, self, context.assigns, buffer, has_strict_locals: strict_locals?)
           end
 
@@ -83,8 +79,6 @@ module Torque
           save_source!("#{context.required_locals_annotation}\n#{buffer.to_s}", template)
         rescue ActionView::StrictLocalsError => e
           raise StrictLocalsError.new(e, template)
-        ensure
-          controller.instance_variable_set(:@_request, old_request)
         end
 
         def save_sources_on

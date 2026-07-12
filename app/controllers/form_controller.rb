@@ -5,12 +5,8 @@ module Torque
     module FormController
       extend ActiveSupport::Concern
 
-      attr_reader :form_element
-
       included do
-        helper_method :form_record, :form_element
-
-        alias_element :primary_form, :new_form, :create_form, :edit_form, :update_form
+        helper_method :form_record
       end
 
       # TODO: Here we can setup a form element for a given action. This will simple coordinate prepare the underlying

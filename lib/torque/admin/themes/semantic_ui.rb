@@ -13,6 +13,9 @@ module Torque
               secondary_horizontal: { class: 'large', style: { margin: 0, border_radius: 0 } },
               primary_vertical: { class: 'inverted left vertical', style: { margin: 0, border_radius: 0 } },
             },
+            table: {
+              index: { class: 'striped stackable selectable compact' },
+            },
             button: {
               primary: { class: 'primary' },
               danger: { class: 'negative' },
@@ -23,7 +26,7 @@ module Torque
         def breadcrumb_with_dividers = true
 
         def logo(src, **kwargs)
-          options = { src: , class: 'logo', style: { display: 'inline-block', margin_right: '1.5ex' } }
+          options = { src: , class: 'logo', style: { display: 'inline-block', margin_right: settings[:default_gap] } }
           render_tag(:img, build_options(options, kwargs))
         end
 
@@ -69,6 +72,18 @@ module Torque
         def buttons_group(content, as: :div, **kwargs)
           body = safe_join([kwargs.delete(:label), icon(:dropdown), menu(content)])
           render_content_tag(as, body, build_options({ class: 'ui dropdown button' }, kwargs))
+        end
+
+        def table_skeleton(content = nil, columns:, rows: nil, **kwargs)
+          content ||= '<div class="ui placeholder"><div class="line"></div></div>'.html_safe
+
+          columns = columns.call if columns.respond_to?(:call)
+          columns = (columns.is_a?(Numeric) ? [nil] * columns : columns).map do |name|
+            content_tag(:td, content, class: ("col-#{name}" if name))
+          end.join
+
+          rows = content_tag(:tr, columns.html_safe) * (rows || settings[:default_table_skeleton_rows])
+          render_content_tag(:tbody, rows, build_options(kwargs))
         end
       end
     end

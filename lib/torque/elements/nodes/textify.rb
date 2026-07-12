@@ -11,7 +11,7 @@ module Torque
 
         included do
           class_attribute :label_key, instance_accessor: false, default: :label
-          class_attribute :text_attributes, instance_accessor: false, default: %i[alt label placeholder title].freeze
+          class_attribute :text_attributes, instance_accessor: false, default: %i[label alt placeholder title].freeze
         end
 
         class_methods do
@@ -31,7 +31,11 @@ module Torque
         end
 
         def text_for(option, default: nil)
-          current = @options[option]
+          if FalseClass === (current = @options[option])
+            @options.delete(option)
+            return
+          end
+
           return current if current.is_a?(String)
 
           @options[option] ||= default.is_a?(String) ? default : begin

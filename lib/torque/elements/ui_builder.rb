@@ -23,6 +23,9 @@ module Torque
 
       SETTINGS = {
         default_gap: '1.5ex',
+        default_col_size: { style: 'width: 10px' },
+        default_col_stretch: { style: 'width: stretch' },
+        default_table_skeleton_rows: 10,
       }
 
       attr_reader :view_context

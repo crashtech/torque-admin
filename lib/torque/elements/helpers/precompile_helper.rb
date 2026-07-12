@@ -6,11 +6,9 @@ module Torque
       # = Torque Elements \Precompile Helpers
       module PrecompileHelper
 
-        def precompile(*keys, static: false, &block)
-          source = caller.lazy.grep(Regexp.new(@current_template.identifier)).first
-          content = find_or_initialize_precompiled(source[/:(\d+):/, 1].to_i, *keys, &block)
-          content = ERB.new(content).result(binding) unless static
-          content.html_safe
+        def precompile(*keys, &block)
+          content = find_or_initialize_precompiled(Elements.current_template_line, *keys, &block)
+          ERB.new(content).result(binding).html_safe
         end
 
         private

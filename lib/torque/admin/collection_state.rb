@@ -4,11 +4,12 @@ module Torque
   module Admin
     # = Torque Admin \Collection State
     class CollectionState
-      attr_reader :collection, :table
-
       include Enumerable
 
-      delegate :[], :each, to: :@table
+      attr_accessor :collection
+      attr_reader :table
+
+      delegate :[], :each, :size, :length, to: :@collection
 
       def initialize
         @table = {}
@@ -32,6 +33,10 @@ module Torque
 
         @table[key.to_sym] = value.freeze
         self
+      end
+
+      def provides?(key)
+        @table.key?(key.to_sym)
       end
 
       def on_ready(&block)
