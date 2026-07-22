@@ -2,18 +2,23 @@
 en:
   torque_admin:
     buttons:
-      search: "Search"
-      preview: "Preview"
+      button:
+        search: "Search"
+        preview: "Preview"
 
-      show: "View"
-      edit: "Edit"
-      destroy: "Delete"
+        show: "View"
+        edit: "Edit"
+        destroy: "Delete"
 
-      new: "New %{singular}"
-      create: "Create %{singular}"
-      update: "Update %{singular}"
+        new: "New %{singular}"
+        create: "Create %{singular}"
+        update: "Update %{singular}"
 
-      more: "More"
+        more: "More"
+
+    table:
+      column:
+        id: 'ID'
 
     dashboard_controller:
       index:

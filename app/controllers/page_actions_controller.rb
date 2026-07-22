@@ -16,7 +16,6 @@ module Torque
 
         def assign_page_actions(infer: true)
           @page_actions = ButtonsElement.new(:page_actions)
-          @page_actions.i18n_options = i18n_default_option if respond_to?(:i18n_default_option, true)
           return unless infer
 
           add_default_page_actions

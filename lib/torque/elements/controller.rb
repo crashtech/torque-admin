@@ -69,7 +69,7 @@ module Torque
         [-"render_#{element.name}_#{node.type}", -"render_#{element.type}_#{node.type}"]
       end
 
-      def elements_i18n_keys_for(*)
+      def elements_i18n_keys
         ['%<name>s.%<type>s.%<id>s', '%<name>s.%<id>s']
       end
 

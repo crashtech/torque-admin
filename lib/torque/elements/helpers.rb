@@ -40,12 +40,9 @@ module Torque
         false
       end
 
-      def safe_dom_id(record, *)
-        return dom_id(record, *) if record.respond_to?(:to_model)
-
-        id = record[:id] || record['id'] || record.object_id
-        key = controller.try(:admin_resource)&.singular_key
-        [*key, id].join('_')
+      def render_with_conditions(options)
+        yield unless (FalseClass === options.delete('if')) || (TrueClass === options.delete('unless')) ||
+          (TrueClass === options.delete('remove_if')) || (FalseClass === options.delete('remove_unless'))
       end
 
       ## Helpers for changing element-based content and options

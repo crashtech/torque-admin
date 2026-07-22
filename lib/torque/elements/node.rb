@@ -93,14 +93,14 @@ module Torque
       end
 
       def of_type?(value)
-        type == value.to_sym
+        value.is_a?(Array) ? type.in?(value) : type == value
       end
+
+      alias =~ of_type?
 
       def fetch_setting(key, default = nil)
         defined?(@settings) ? @settings.fetch(key, default) : default
       end
-
-      alias =~ of_type?
 
       def inspect
         "#<#{self.class.name} id=#{id.inspect} type=#{type.inspect} children=#{children.size} options=#{options.inspect}>"

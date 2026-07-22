@@ -9,7 +9,7 @@ module Torque
       attr_accessor :collection
       attr_reader :table
 
-      delegate :[], :each, :size, :length, to: :@collection
+      delegate :[], :each, :size, :length, :to_a, :to_enum, to: :@collection
 
       def initialize
         @table = {}

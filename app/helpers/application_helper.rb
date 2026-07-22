@@ -74,6 +74,11 @@ module Torque
         ::I18n.translate(keys.shift, default: [*keys, *default], **)
       end
 
+      def implicit_translate_node(element_type, type, id, **)
+        options = controller.send(:i18n_default_option) if controller.respond_to?(:i18n_default_option, true)
+        ::I18n.translate("torque_admin.#{element_type}.#{type}.#{id}", **options, **, default: nil)
+      end
+
       def current_page_prefix?(options = nil)
         url_string = URI::RFC2396_PARSER.unescape(url_for(options)).force_encoding(Encoding::BINARY)
         request_uri = URI::RFC2396_PARSER.unescape(request.path).force_encoding(Encoding::BINARY)

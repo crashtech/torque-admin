@@ -7,7 +7,6 @@ module Torque
       module Definition
         extend ActiveSupport::Concern
 
-        attr_accessor :i18n_options
         attr_reader :name, :options, :state, :root
 
         delegate :id, to: :root
@@ -53,6 +52,12 @@ module Torque
         def type
           raise NotImplementedError, +'Subclasses must implement the #type method'
         end
+
+        def of_type?(value)
+          value.is_a?(Array) ? type.in?(value) : type == value
+        end
+
+        alias =~ of_type?
 
         def within(node, &)
           nest_content(node.is_a?(Node) ? node : fetch(node), &)
@@ -111,7 +116,7 @@ module Torque
             @current = node
 
             if !loading? && rendering?
-              node.content = Context.view_context.capture(@interface, *, &block)
+              node.content = view_context.capture(@interface, *, &block)
             elsif loading? && block.arity == 0
               @interface.instance_eval(&block)
             else

@@ -79,7 +79,8 @@ module Torque
           end
 
           Thread.current[Key].clear
-          raise error if error
+          Rails.logger.error(error) if error
+          # raise error if error
           # TODO: Add support for web console and better errors, guiding turbo to render it as a new page
         end
 
@@ -93,7 +94,9 @@ module Torque
             when :async then Async(&)
             when :concurrent_ruby
               Concurrent::Future.execute(args: Thread.current) do |t1|
-                ActiveSupport::IsolatedExecutionState.share_with(t1, &)
+                ActiveSupport::IsolatedExecutionState.share_with(t1) do
+                  Elements::Context.with(view_context:, &)
+                end
               end
             else
               raise "Unknown parallel processing method: #{processor.inspect}"

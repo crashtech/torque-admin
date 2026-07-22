@@ -5,11 +5,6 @@ module Torque
     # = Torque Elements \UI Options Helpers
     class UiBuilder
       module OptionsHandlers
-        def removed_from_options(options)
-          (FalseClass === options.delete('if')) || (TrueClass === options.delete('unless')) ||
-            (TrueClass === options.delete('remove_if')) || (FalseClass === options.delete('remove_unless'))
-        end
-
         def append_options(options, values)
           list = options['@append'] ||= []
           values.is_a?(Array) ? list.concat(values) : list << values

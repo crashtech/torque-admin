@@ -9,6 +9,10 @@ module Torque
   module Elements
     extend ActiveSupport::Autoload
 
+    # Indicate that when using i18n in templates, the template will render a I18n code block that calls the translation,
+    # instead of hard-coding the translation text in the generated view file
+    mattr_accessor :i18n_safe_template, instance_accessor: false, default: false
+
     autoload :Frame
     autoload :Templates
     autoload :Controller
@@ -48,6 +52,7 @@ module Torque
     class << self
       def debug_templates!(path = Rails.root.join('tmp', 'templates'))
         Templates::UnboundTemplate.redefine_method(:save_sources_on) { path }
+        Elements.const_set(:DEBUG_TEMPLATES, true)
       end
 
       def logger

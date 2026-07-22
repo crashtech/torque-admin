@@ -10,6 +10,16 @@ module Torque
         extend ActiveSupport::Concern
 
         include LocalsHelper
+
+        class Buffer < ActiveSupport::SafeBuffer
+          def gsub(*args)
+            args[0] == '"' && args[1] == '&quot;' ? self : super
+          end
+        end
+
+        def append(body)
+          Buffer.new("<%= #{body} %>")
+        end
       end
     end
   end

@@ -37,10 +37,13 @@ module Torque
           break unless depth
 
           item = fetch_next
-          @content.last << yield(item, content) if depth >= @min_depth
+          next unless depth >= @min_depth
+
+          result = yield(item, content)
+          @content.last << result unless result.nil?
         end
 
-        @content.pop
+        @content.pop.presence
       end
 
       private

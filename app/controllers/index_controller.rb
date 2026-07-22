@@ -25,25 +25,27 @@ module Torque
           @page_title = title.to_s if title.present?
           state = assign_index_state_collection(options)
 
-          parts = { action: action_name, resource: try(:admin_resource)&.plural_key }
-
+          resource = try(:admin_resource)
+          parts = { action: action_name, resource: resource&.plural_key }
           name = format(options.delete(:name) || "%<action>s_table_%<resource>s", parts)
-          @table = @primary_element = TableElement.new(name, state, **options, as: :table, preset: :index, &)
-          @table.skeleton(rows: 30) if false # TODO: Use when streaming
-          @table.change(:root, class: [:index_table, action_name])
-          @table
+
+          options[:id] ||= Elements.node_id(name)
+          options[:primary_key] ||= self.class.try(:identified_by) || :id
+          options[:source_type] ||= resource&.singular_key || admin_controller_name.singularize
+
+          table = @primary_element = assign_table_element(name, state, **options, preset: :index, &)
+          table.change(:root, class: [:index_table, action_name])
+          table
+
+          # @table.skeleton(rows: 30) if false # TODO: Use when streaming
+        end
+
+        def assign_table_element(*, **, &)
+          @table = TableElement.new(*, **, &)
         end
 
 
 
-
-
-      # TODO: Probably the most complex of all the controllers that are based on elements, as index can have multiple
-      # shapes and have several related elements (e.g. filters, pagination, actions, batch actions, etc.)
-      #
-      # Ideally we can have 2 different types of out-of-the-box index pages: table and list, with table as the default.
-      # Table is straightforward, with columns and rows. Lists have rows as items of the list, and columns as
-      # attributes displayed within each item in specific positions
     end
   end
 end

@@ -6,20 +6,35 @@ module Torque
       # = Torque Admin \Resource Active Model
       module ActiveModel
         def singular_key
-          resource_class.try(:model_name)&.singular || super
+          active_model? ? resource_class.model_name.singular : super
         end
 
         def singular_title
-          resource_class.try(:model_name)&.human || super
+          active_model? ? resource_class.model_name.human : super
         end
 
         def plural_key
-          resource_class.try(:model_name)&.plural || super
+          active_model? ? resource_class.model_name.plural : super
         end
 
         def plural_title
-          resource_class.try(:model_name)&.human(count: 2) || super
+          active_model? ? resource_class.model_name.human(count: 2) : super
         end
+
+        def attribute_name(attribute)
+          return super unless active_model?
+
+          @attribute_names ||= Hash.new { |h, k| h[k] = resource_class.human_attribute_name(k, default: '').presence }
+          @attribute_names[attribute]
+        end
+
+        private
+
+          def active_model?
+            return @type == :active_model if defined?(@type)
+
+            @type = :active_model if resource_class.respond_to?(:model_name)
+          end
       end
     end
   end

@@ -45,7 +45,7 @@ module Torque
           render_methods[render_cache_key_for(node)] ||= fetch_render_for(node)
         end
 
-        def finalize_content_body(content)
+        def postamble_root_content(content)
           content
         end
 

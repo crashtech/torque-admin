@@ -15,6 +15,30 @@ module Torque
         end
 
         class_methods do
+          def template_safe_textify?
+            Elements.i18n_safe_template && Context.view_context.try(:template_render_context?)
+          end
+
+
+          def i18n_keys
+            @i18n_keys ||= Context.view_context.elements_i18n_keys
+          end
+          def translate(element, element_type, type, id, property, primary: false, attribute: false, titlelize: false, default: nil)
+            values = { name: element, element_type:, type:, id: }
+
+            keys = Context.view_context.elements_i18n_keys
+            keys = map_i18n_keys(property, keys, primary:) { |key| format(key, values).to_sym }
+            ::I18n.translate(keys.shift, default: keys, raise: true)
+          rescue ::I18n::MissingTranslationData => error
+            fallback = nil
+            if primary
+              fallback ||= Context.view_context.controller.try(:implicit_attribute_name, id).presence if attribute
+              fallback ||= Context.view_context.try(:implicit_translate_node, element_type, type, id).presence
+            end
+            fallback ||= default.to_s.underscore.public_send(titlelize ? :titleize : :humanize) if default.is_a?(Symbol)
+            fallback || (default if default.is_a?(String)) || error.message
+          end
+
           protected
 
             def label_key=(value)
@@ -23,6 +47,17 @@ module Torque
 
             def text_attributes=(values)
               super(Array.wrap(values).map(&:to_sym).freeze)
+            end
+
+            def map_i18n_keys(option, keys, primary: false)
+              keys.flat_map do |key|
+                next yield(key) if option.nil?
+
+                value = yield("#{key}.#{option}")
+                next value if primary
+
+                [value, yield(key)]
+              end
             end
         end
 
@@ -39,13 +74,21 @@ module Torque
           return current if current.is_a?(String)
 
           @options[option] ||= default.is_a?(String) ? default : begin
-            raise ::I18n::MissingTranslationData unless defined?(@element)
-
-            values = { name: @element.send(:i18n_name), element_type: @element.type, type: @type, id: @id.underscore }
-            keys = map_i18n_keys(option) { |key| format(key, values).to_sym }
-            ::I18n.translate(keys.shift, default: keys, raise: true, **@element.i18n_options)
-          rescue ::I18n::MissingTranslationData
-            text_for_fallback(default, option) if default.present?
+            if defined?(@element) && Node.template_safe_textify?
+              template_safe_text_for(option, default)
+            else
+              Node.translate(
+                @element&.send(:i18n_name),
+                @element&.type,
+                @type,
+                @id.underscore,
+                option,
+                primary: option == label_key,
+                attribute: @element&.implicit_attribute_for?(option, self),
+                titlelize: @element&.titlelize_text_for?(option, self),
+                default: default,
+              )
+            end
           end
         end
 
@@ -70,20 +113,20 @@ module Torque
             end
           end
 
-          def text_for_fallback(value, key)
-            (defined?(@element) && @element.fallback_text_for(key, value, self)) ||
-              value.to_s.underscore.humanize
-          end
-
-          def map_i18n_keys(option, primary: label_key, keys: @element.send(:i18n_keys))
-            keys.flat_map do |key|
-              next yield(key) if option.nil?
-
-              value = yield("#{key}.#{option}")
-              next value if option != primary
-
-              [value, yield(key)]
-            end
+          def template_safe_text_for(option, default)
+            Context.view_context.append(<<~RUBY.squish)
+              Torque::Elements::Node.translate(
+                "#{@element.send(:i18n_name)}",
+                "#{@element.type}",
+                "#{@type}",
+                "#{@id.underscore}",
+                "#{option}",
+                primary: #{(option == label_key).inspect},
+                attribute: #{@element.implicit_attribute_for?(option, self).present?.inspect},
+                titlelize: #{@element.titlelize_text_for?(option, self).present?.inspect}
+                #{", default: :#{default}" if default.is_a?(Symbol)}
+              )
+            RUBY
           end
 
       end

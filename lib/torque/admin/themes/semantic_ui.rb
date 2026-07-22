@@ -27,7 +27,7 @@ module Torque
 
         def logo(src, **kwargs)
           options = { src: , class: 'logo', style: { display: 'inline-block', margin_right: settings[:default_gap] } }
-          render_tag(:img, build_options(options, kwargs))
+          render_tag('img', [options, kwargs])
         end
 
         def application_banner(content, **kwargs)
@@ -36,11 +36,11 @@ module Torque
 
         def page_content(as: 'main', **kwargs, &)
           options = { class: 'ui fluid container', style: { 'padding-inline' => settings[:default_gap] } }
-          render_content_tag(as, nil, build_options(options, kwargs), &)
+          render_content_tag(as, nil, [options, kwargs], &)
         end
 
         def page_banner(title, description, breadcrumbs, actions, **options)
-          description = content_tag(:div, description, class: 'sub header') if description.present?
+          description = content_tag('div', description, class: 'sub header') if description.present?
           result = ui.header(safe_join([title, description].compact), style: { 'margin' => '0' })
 
           if actions.present?
@@ -60,8 +60,8 @@ module Torque
         end
 
         def page_footer(content)
-          content = content_tag(:div, content, class: 'ui center aligned container')
-          content_tag(:footer, content, class: 'ui inverted vertical footer segment')
+          content = content_tag('div', content, class: 'ui center aligned container')
+          content_tag('footer', content, class: 'ui inverted vertical footer segment')
         end
 
         ## Extra Elements
@@ -71,7 +71,7 @@ module Torque
 
         def buttons_group(content, as: :div, **kwargs)
           body = safe_join([kwargs.delete(:label), icon(:dropdown), menu(content)])
-          render_content_tag(as, body, build_options({ class: 'ui dropdown button' }, kwargs))
+          render_content_tag(as, body, [{ class: 'ui dropdown button' }, kwargs])
         end
 
         def table_skeleton(content = nil, columns:, rows: nil, **kwargs)
@@ -79,11 +79,10 @@ module Torque
 
           columns = columns.call if columns.respond_to?(:call)
           columns = (columns.is_a?(Numeric) ? [nil] * columns : columns).map do |name|
-            content_tag(:td, content, class: ("col-#{name}" if name))
+            content_tag('td', content, class: ("col-#{name}" if name))
           end.join
 
-          rows = content_tag(:tr, columns.html_safe) * (rows || settings[:default_table_skeleton_rows])
-          render_content_tag(:tbody, rows, build_options(kwargs))
+          render_content_tag('tr', columns.html_safe, [kwargs]) * (rows || settings[:default_table_skeleton_rows])
         end
       end
     end

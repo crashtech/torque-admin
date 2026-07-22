@@ -15,7 +15,7 @@ module Torque
             @required_locals[:block] = as.to_s
           end
 
-          def require_argument!(name, default_as_str = nil, default: NULL)
+          def require_local!(name, default_as_str = nil, default: NULL)
             name = name.to_s
             default_as_str ||= default.inspect if default != NULL
 

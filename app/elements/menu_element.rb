@@ -71,8 +71,8 @@ module Torque
         result
       end
 
-      def fallback_text_for(key, value, node)
-        value.to_s.underscore.titleize if node =~ :item && key == :label
+      def titlelize_text_for?(key, node)
+        node =~ :item && key == :label
       end
 
       ## Others

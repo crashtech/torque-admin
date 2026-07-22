@@ -106,6 +106,7 @@ module Torque
           def save_source!(source, template)
             return source if (base = save_sources_on).blank?
 
+            source = HtmlBeautifier.beautify(source) if defined?(HtmlBeautifier)
             FileUtils.mkdir_p(File.join(base, File.dirname(template.virtual_path)))
             File.write(File.join(base, "#{template.virtual_path}.#{@extension}"), source)
             source

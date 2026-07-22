@@ -10,10 +10,10 @@ module Torque
 
       attr_reader :header, :column, :footer
 
-      self.settings += %i[as accessor sortable stretch header col cell footer]
+      self.settings += %i[as sortable stretch] + APPENDABLE_PARTS.to_a
 
       def type
-        defined?(@rendering_type) ? @rendering_type : super
+        (@rendering_type if defined?(@rendering_type)) || super
       end
 
       def sortable?
@@ -34,13 +34,13 @@ module Torque
         render_header_part(options)
         render_column_part
         render_footer_part
-        render_cell_part
-      ensure
-        remove_instance_variable(:@rendering_type)
       end
 
       def render_header_part(options)
-        @header ||= render_part(:column_header, options.reverse_merge(sortable: sortable?), to: :headers)
+        @header ||= begin
+          options = options.reverse_merge(sortable: sortable?)
+          render_part(:column_header, options, to: :headers, body: options.delete(:label))
+        end
       end
 
       def render_column_part
@@ -50,19 +50,17 @@ module Torque
       def render_footer_part
         return if defined?(@footer)
 
-        options = fetch_setting(:footer)
+        options = fetch_setting(:footer)&.dup
         return if options.blank? && (!defined?(@element) || !@element.with_footer?)
 
-        @footer = render_part(:column_footer, options, to: :footers)
-      end
-
-      def render_cell_part
+        body = options&.delete(:content)
+        @footer = render_part(:column_footer, options, to: :footers, body:)
       end
 
       protected
 
         def render_part(type, options, to:, body: nil)
-          content = blank_part(type) if content.blank? && options.blank?
+          content = blank_part(type) if body.blank? && options.blank?
           content ||= begin
             @rendering_type = type
             handler, *settings = defined?(@element) ? @element.render_handler_for(self) : render_handler
@@ -73,6 +71,8 @@ module Torque
             else
               send(handler, nil, body, options, *settings)
             end
+          ensure
+            @rendering_type = nil
           end
 
           @element.append_content_for(to, content) if defined?(@element)
@@ -80,7 +80,7 @@ module Torque
         end
 
         def blank_part(type)
-          fetch_setting(:header, false) || type == :column_header ? BLANK_HEADER : BLANK_CELL
+          (fetch_setting(:header, false) || type == :column_header) ? BLANK_HEADER : BLANK_CELL
         end
 
         def merge_settings(values)

@@ -32,18 +32,18 @@ module Torque
           sortable_lists(range).each { |list| list.sort_by!(&block) }
         end
 
-        def fallback_text_for(*)
-          # Override this method to better handle missing translations for specific nodes
+        def titlelize_text_for?(*)
+          false
+        end
+
+        def implicit_attribute_for?(*)
+          false
         end
 
         protected
 
           def i18n_name
             @name
-          end
-
-          def i18n_keys
-            @i18n_keys ||= Context.view_context.elements_i18n_keys_for(self)
           end
 
           # TODO: Add support for sorting specific branches only

@@ -62,6 +62,10 @@ module Torque
         plural_key.titleize
       end
 
+      def attribute_name(*)
+        # Placeholder for future attribute name resolution logic
+      end
+
       def inspect
         "#<#{self.class.name} #{<<~INSPECT.chomp}>".squish
           name=#{name.inspect}

@@ -23,6 +23,7 @@ module Torque
     autoload_under :concerns do
       autoload :ItemsFromAction
       autoload :ItemsFromRouter
+      autoload :RowsFromEntries
     end
 
     # = Torque Admin \Themes

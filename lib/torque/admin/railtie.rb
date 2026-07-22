@@ -14,6 +14,10 @@ module Torque
       config.eager_load_namespaces << Torque::Forms
       config.eager_load_namespaces << Torque::Admin
 
+      # TODO: Think about this. We need the routes because it's from where we load the resources, but it might not be
+      # nice to force the routes the be loaded this way
+      console { Rails.application.reload_routes! }
+
       initializer 'torque-admin.railtie_setup' do
         ::Rails::Railtie::ABSTRACT_RAILTIES << 'Torque::Admin::Engine'
 

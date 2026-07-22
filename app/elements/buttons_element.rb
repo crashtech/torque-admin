@@ -36,8 +36,8 @@ module Torque
 
       ## Renderer
 
-      def fallback_text_for(key, value, node)
-        value.to_s.underscore.titleize if key == :label
+      def titlelize_text_for?(key, node)
+        key == :label
       end
 
       ## Others

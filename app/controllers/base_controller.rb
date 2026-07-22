@@ -106,13 +106,12 @@ module Torque
           end
       end
 
-      def elements_i18n_keys_for(*)
+      def elements_i18n_keys
         [
           "#{admin_application.name}.%<name>s.%<type>s.%<id>s",
           "#{admin_application.name}.%<name>s.%<id>s",
           '%<name>s.%<type>s.%<id>s',
           '%<name>s.%<id>s',
-          'torque_admin.%<element_type>s.%<id>s',
         ]
       end
 

@@ -81,7 +81,7 @@ module Torque
           end
 
           return @content unless type == :root && defined?(@element)
-          @content = @element.finalize_content_body(@content)
+          @content = @element.postamble_root_content(@content)
         end
 
         def render!(**)

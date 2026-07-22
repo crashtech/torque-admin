@@ -70,6 +70,10 @@ module Torque
         end
       end
 
+      def implicit_attribute_name(attribute)
+        admin_resource.attribute_name(attribute)
+      end
+
       protected
 
         def processing_member_action?

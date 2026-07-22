@@ -36,17 +36,11 @@ module Torque
           true
         end
 
-        def process_table_body(element)
-          current = element.accessors.define_ivar(:current)
-          name = -element.settings(:as, :table).to_s
+        def render_with_conditions(options)
+          conditions = options.extract!('if', 'unless', 'remove_if', 'remove_unless')
+          yield if conditions.empty?
 
-          source = +''
-          source << "<%- #{name}.entries.each do |entry| -%>"
-          source << "<%- #{current} = entry -%>"
-          source << "<%= #{name}.row(entry) { content_tag(:td, entry.id) } -%>"
-          source << '<%- end -%>'
-
-          element.body(source.html_safe).render!
+          raise 'This is more complex!'
         end
 
         def inspect
