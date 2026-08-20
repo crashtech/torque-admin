@@ -9,30 +9,24 @@ module Torque
       alias import_from_routes import_items_from_router
       alias import_from_sections import_items_from_sections
 
-      custom_render_for(:item) do |content = nil, **options|
-        node = options.delete(:@node)
-        label = options.delete(:label)
-        as_link = options[:href].present?
+      # A menu item is a link that may also head a list of additional options. It computes
+      # the logical flags at render time (content is built before options are sanitized);
+      # the physical composition lives in the ui `menu_entry` helper.
+      class ItemNode < Elements::LinkNode
+        protected
 
-        if content.present?
-          submenu = ui.submenu(content, **options.delete(:submenu))
-          dropdown = !!options[:@element].settings(:dropdowns, true)
-          ui.append_options(options, (dropdown ? :append : :after) => submenu)
+          def sanitized_options!
+            super
+            return if content.blank? || options.key?(:dropdown)
 
-          label = ui.menu_item(label, options.slice!(:after, :dropdown, :prepend, :append, '@append')) if as_link
-          ui.menu_header(label, dropdown: dropdown.presence, **options)
-        elsif as_link
-          ui.menu_item(label, **options)
-        else
-          ui.menu_header(label, **options)
-        end
+            options[:dropdown] = element.settings(:dropdowns, true)
+          end
       end
 
-      def type = :menu
+      node :item, as: ItemNode, render: :menu_entry
+      node :divider, as: :basic
 
-      def element_settings
-        super + %i[sort icons dropdowns detect_current]
-      end
+      setting :sort, :icons, :dropdowns, :detect_current
 
       ## Define nodes
 
@@ -47,14 +41,10 @@ module Torque
         options[:label] ||= href_or_label || identifier
         options[:icon] ||= icon if icon
 
-        add_node(identifier, :item, options, node_type: (:link if options[:href]), &)
+        super(identifier, **options, &)
       end
 
       alias import_item item
-
-      def divider
-        add_node(nil, :divider)
-      end
 
       ## Overrides
 

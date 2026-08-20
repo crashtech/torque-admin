@@ -106,7 +106,7 @@ module Torque
             ivar = controller.send(:member_ivar_name)
             member = instance_variable_defined?(ivar) ? instance_variable_get(ivar) : begin
               current = controller.send(:nested_scope_from, current) if current
-              controller.send(:find_member!, values[key], scope: current || controller.send(:default_scoped_resource))
+              controller.send(:find_member!, values[key], scope: current)
             end
 
             instance_variable_set(ivar, member) if assign
@@ -114,16 +114,11 @@ module Torque
           end
         end
 
-        def nested_scope_from(foreign_member, reflection: nil, belongs_to_only: true)
-          reflection ||= admin_resource_class.reflect_on_all_associations.find do |reflection|
-            reflection.klass == foreign_member.class && (!belongs_to_only || reflection.belongs_to?)
-          end&.name
+        def nested_scope_from(foreign_member, reflection: nil)
+          reflection ||= admin_resource.parent_reflections[foreign_member.class]
+          return default_scoped_resource.where(reflection.name => foreign_member) if reflection
 
-          raise <<~MSG unless reflection
-            Unable to find a reflection for #{foreign_member.class} within #{admin_resource_class}
-          MSG
-
-          default_scoped_resource.where(reflection.name => foreign_member)
+          raise "Unable to find a reflection for #{foreign_member.class} within #{admin_resource_class}"
         end
 
         def i18n_default_option(resource_name: processing_member_action?)

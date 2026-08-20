@@ -49,12 +49,12 @@ The gem provides controller-behavior *concerns*, mixed into per-application gene
 - Authorization: only CanCanCan is implemented; Pundit and a built-in `torque_admin` adapter are accepted config values with no backing controller files
 
 ### Elements
-Pre-built UI components:
-- `ButtonsElement` - fully implemented
-- `BreadcrumbElement` - fully implemented, powered by the `ItemsFromAction` concern
-- `MenuElement` - fully implemented, powered by the `ItemsFromRouter` concern
-- `TableElement` - implemented for column/row/selection; its non-default column-content paths (`ColumnNode#content_from_helper`/`#content_from_method`) are broken/empty; no pagination
-- `BaseElement` - an explicit placeholder, adds only a `:placement` setting
+Pre-built UI components (all on the post-Project-1 unified core — see `element-components.md`):
+- `ButtonsElement` - implemented (`render_button` element hook, groups/dividers)
+- `BreadcrumbElement` - implemented, powered by the `ItemsFromAction` concern
+- `MenuElement` - implemented (`ItemNode` + `ui.menu_entry`), powered by the `ItemsFromRouter` concern
+- `TableElement` - implemented on the unified core (`projects/04-table-element.md`, stages 1–4): columns/parts, footers, `each_row`, per-row actions, sortable headers; formatting via the view `formatter` proxy (`projects/03-formatting.md`)
+- `BaseElement` - pure abstract marker (`abstract_class = true` only)
 
 ## Usage
 

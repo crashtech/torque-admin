@@ -4,19 +4,22 @@ module Torque
   module Elements
     module Core
       # = Torque Elements \Core Nodes
+      #
+      # Children management and node positioning. The element is its own root: +children+
+      # are the element's direct children, and position references resolve against the
+      # element itself.
       module Nodes
         extend ActiveSupport::Concern
 
-        POSITION_OPTIONS = %i[insert_after insert_before prepend_to append_to].freeze
-
         def children
-          @children ||= load_config!.then { @root.children }
+          load_config!
+          super
         end
 
-        alias nodes children
+        alias_method :nodes, :children
 
         def traverse(source = children, **, &block)
-          if source.is_a?(Node)
+          if source.is_a?(BasicNode)
             return block.call(source) if source.leaf?
 
             source = source.children
@@ -26,7 +29,7 @@ module Torque
         end
 
         def move(node, **options)
-          node = fetch(node) unless node.is_a?(Node)
+          node = fetch(node) unless node.is_a?(BasicNode)
 
           options[:insert_after] = options.delete(:after) if options[:after]
           options[:insert_before] = options.delete(:before) if options[:before]
@@ -37,7 +40,7 @@ module Torque
 
         protected
 
-          def append_node(node, options = node.settings)
+          def append_node(node, options = node.try(:settings))
             add_on_position(node, options) || add_on_position!(node)
           end
 
@@ -45,13 +48,13 @@ module Torque
             (node.parent&.children || children).delete(node)
           end
 
-          def add_on_position(node, options = node.settings)
+          def add_on_position(node, options = node.try(:settings))
             return unless options
 
-            POSITION_OPTIONS.find do |position|
+            Node::POSITION_OPTIONS.find do |position|
               value = options[position]
 
-              next unless [Node, Symbol, TrueClass, FalseClass].include?(value.class)
+              next unless value.is_a?(BasicNode) || value.is_a?(Symbol) || value.eql?(true) || value.eql?(false)
               next unless (ref = ref_to_node(value))
 
               add_on_position!(node, ref, position)
@@ -60,20 +63,22 @@ module Torque
 
         private
 
-          def add_on_position!(node, ref = @current || root, operation = :append_to)
+          def add_on_position!(node, ref = @current || self, operation = :append_to)
             case operation
             when :prepend_to then (parent = ref).children.unshift(node)
             when :append_to then (parent = ref).children.push(node)
             when :insert_before
-              nodes = (parent = ref.parent || root).children
+              nodes = (parent = ref.parent || self).children
               nodes.insert(nodes.index(ref), node)
             when :insert_after
-              nodes = (parent = ref.parent || root).children
+              nodes = (parent = ref.parent || self).children
               nodes.insert(nodes.index(ref) + 1, node)
             end
 
-            node.instance_variable_set(:@element, self)
-            node.instance_variable_set(:@parent, parent)
+            node.parent = parent
+            node.element ||= self
+            node.instance_variable_set(:@state, @state) if node.is_a?(Base)
+            parent
           end
       end
     end

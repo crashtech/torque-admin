@@ -3,91 +3,128 @@
 module Torque
   module Elements
     # = Torque Elements \Column Node
+    #
+    # The logical description of a column: what to read from each entry (+source+), how to
+    # format it, and the options of each physical unit it answers through parts. It renders
+    # nothing by itself; the owning element pulls its parts.
     class ColumnNode < Node
-      BLANK_CELL = -'<td></td>'.html_safe.freeze
-      BLANK_HEADER = -'<th></th>'.html_safe.freeze
-      APPENDABLE_PARTS = %i[col cell footer].to_set.freeze
+      UNITS = %i[col header cell footer].freeze
 
-      attr_reader :header, :column, :footer
+      setting :as, :from, :sortable, :stretch, :width, :fallback, :summary, *UNITS
 
-      self.settings += %i[as sortable stretch] + APPENDABLE_PARTS.to_a
+      attr_reader :source, :formatter_options
 
-      def type
-        (@rendering_type if defined?(@rendering_type)) || super
+      UNITS.each do |unit|
+        define_method(unit) do |**options|
+          merge_settings(unit => options)
+          self
+        end
+      end
+
+      def initialize(id, type, source: id, **options)
+        super(id, type, **options)
+
+        @source = source
+        @formatter_options = @options.extract!(*@options.keys.excluding(label_key)).freeze
+      end
+
+      def label
+        return @label if defined?(@label)
+
+        value = @options.delete(label_key)
+        @label = value == false ? nil : text_for(label_key, default: value)
+      end
+
+      def unit_options(unit)
+        fetch_setting(unit, {})
+      end
+
+      def col_options
+        { stretch: stretch?, width: fetch_setting(:width), **unit_options(:col) }
+      end
+
+      def header_options
+        return unit_options(:header) unless sortable?
+
+        { sortable: true, **sorting_options, **unit_options(:header) }
+      end
+
+      def sorting_options
+        sorting = element.entries.sorting
+        reflection, attribute = sort_key
+        { direction: sorting.values[[reflection, attribute]], href: sorting.href.call(attribute, reflection:) }
+      end
+
+      def summarize(content: nil, aggregate: nil, all: nil, as: nil, **formatter_options)
+        merge_settings(summary: { content:, aggregate:, all:, as:, formatter_options: }.freeze)
+        self
       end
 
       def sortable?
-        fetch_setting(:sortable, @element&.default_sort_for(id))
+        value = fetch_setting(:sortable)
+        return !!value unless value.nil?
+
+        reflection, attribute = sort_key
+        element.entries.sorting.sortable.call(attribute, reflection:)
+      end
+
+      def sort_key
+        @sort_key ||= begin
+          value = fetch_setting(:sortable)
+          attribute = value.is_a?(Symbol) || value.is_a?(String) ? value : source
+          [fetch_setting(:from)&.to_s, attribute.to_s]
+        end
       end
 
       def stretch?
-        fetch_setting(:stretch, @element&.default_stretch_for(id))
+        return false if fetch_setting(:from)
+
+        value = fetch_setting(:stretch)
+        return !!value unless value.nil?
+
+        config = Context.view_context.controller.try(:admin_application_config)
+        config&.resources&.title_methods&.include?(source) || false
       end
 
-      def content
+      def dispatch_part(part, *args, **options)
+        super(part, *part_arguments(part, *args), **part_options(part), **options)
       end
 
       def render(outer: false)
-        return content if outer
-
-        options = sanitized_options
-        render_header_part(options)
-        render_column_part
-        render_footer_part
       end
 
-      def render_header_part(options)
-        @header ||= begin
-          options = options.reverse_merge(sortable: sortable?)
-          render_part(:column_header, options, to: :headers, body: options.delete(:label))
-        end
+      def to_s
+        ''
       end
 
-      def render_column_part
-        @column ||= render_part(:column_col, fetch_setting(:col, {}).reverse_merge(stretch: stretch?), to: :columns)
-      end
-
-      def render_footer_part
-        return if defined?(@footer)
-
-        options = fetch_setting(:footer)&.dup
-        return if options.blank? && (!defined?(@element) || !@element.with_footer?)
-
-        body = options&.delete(:content)
-        @footer = render_part(:column_footer, options, to: :footers, body:)
-      end
+      alias to_str to_s
+      alias html_safe to_s
 
       protected
 
-        def render_part(type, options, to:, body: nil)
-          content = blank_part(type) if body.blank? && options.blank?
-          content ||= begin
-            @rendering_type = type
-            handler, *settings = defined?(@element) ? @element.render_handler_for(self) : render_handler
-            missing_handler! unless handler
-
-            if handler.respond_to?(:call)
-              handler.call(body, **options)
-            else
-              send(handler, nil, body, options, *settings)
-            end
-          ensure
-            @rendering_type = nil
+        def part_arguments(part, *args)
+          case part
+          when :col then []
+          when :header then [label]
+          when :cell then [element.value_for(args.first, self)]
+          when :footer then [element.summary_for(self)]
+          else args
           end
-
-          @element.append_content_for(to, content) if defined?(@element)
-          content
         end
 
-        def blank_part(type)
-          (fetch_setting(:header, false) || type == :column_header) ? BLANK_HEADER : BLANK_CELL
+        def part_options(part)
+          case part
+          when :col then col_options
+          when :header then header_options
+          else unit_options(part)
+          end
         end
 
         def merge_settings(values)
-          return super unless defined?(@settings)
+          return super unless defined?(@settings) && @settings
 
           values.each do |key, value|
-            if APPENDABLE_PARTS.include?(key) && (current = @settings[key])
+            if UNITS.include?(key) && (current = @settings[key])
               (current['@append'] ||= []).push(value)
             else
               @settings[key] = value

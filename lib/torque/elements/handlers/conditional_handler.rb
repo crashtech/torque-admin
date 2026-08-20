@@ -3,7 +3,21 @@
 module Torque
   module Elements
     # = Torque Elements \Conditional Handler
-    class Conditional < BaseHandler
+    #
+    # Reduces every value accumulated for a conditional attribute into a single boolean. The operator
+    # decides how multiple values combine, while the polarity of that boolean is applied by the render
+    # site, so +if+/+remove_unless+ use +:and+ and +unless+/+remove_if+ use +:or+.
+    class ConditionalHandler < BaseHandler
+      OPERATORS = %i[and or].freeze
+
+      def initialize(operator = :and)
+        raise ::ArgumentError, <<~MSG.squish unless OPERATORS.include?(operator)
+          Invalid operator #{operator.inspect}, valid operators are: #{OPERATORS.map(&:inspect).join(', ')}.
+        MSG
+
+        @operator = operator
+      end
+
       def combine(current, value)
         list_combine(current, value)
       end
@@ -11,33 +25,38 @@ module Torque
       def collapse(value)
         return if value.nil?
 
-        all_values(value).nil?
-      rescue Interrupt
-        false
+        expected = @operator == :and
+        each_value(value) { |result| return !expected unless result == expected }
+        expected
       end
 
-      def all_values(input)
+      def each_value(input, &)
         queue = [input]
 
         until queue.empty?
           current = queue.shift
 
-          case input
-          when NilClass, TrueClass
-            # Do nothing for nil or true values
-          when FalseClass
-            raise Interrupt
-          when Enumerable
-            queue.concat(current)
-          when Method
-            queue.push(current.call)
-          when Proc
-            view_context.instance_exec(&current)
-          else
-            queue.push(!!current)
+          case current
+          when NilClass then next
+          when TrueClass, FalseClass then yield(current)
+          when Enumerable then queue.concat(current.to_a)
+          when *PROC_CLASSES then queue.push(collapse_proc(current))
+          when Symbol then queue.push(resolve(current))
+          else yield(true)
           end
         end
       end
+
+      private
+
+        # TODO: We should probably move this to base. That way, it might be easier to add support for templates later on
+        def resolve(name)
+          raise ::NameError, <<~MSG.squish unless view_context.respond_to?(name)
+            Condition #{name.inspect} is not available on #{view_context.class.name}.
+          MSG
+
+          view_context.public_send(name)
+        end
     end
   end
 end

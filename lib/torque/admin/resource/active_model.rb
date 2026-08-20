@@ -28,6 +28,14 @@ module Torque
           @attribute_names[attribute]
         end
 
+        def parent_reflections
+          @parent_reflections ||= Hash.new do |hash, klass|
+            hash[klass] = resource_class.reflect_on_all_associations.find do |association|
+              association.belongs_to? && !association.polymorphic? && association.klass == klass
+            end
+          end
+        end
+
         private
 
           def active_model?

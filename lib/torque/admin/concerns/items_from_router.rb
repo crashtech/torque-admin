@@ -20,7 +20,7 @@ module Torque
           next if skip_import_route?(route, section, actions, authenticated_only, sources, filter_sections)
 
           if filter_sections
-            state[:current_section] = [section, root]
+            state[:current_section] = [section, self]
             section = :root
           else
             section = import_route_section(section, state)

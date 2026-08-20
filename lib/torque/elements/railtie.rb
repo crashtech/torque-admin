@@ -18,19 +18,19 @@ module Torque
       initializer 'torque-elements.default_attributes' do
         Elements.define_attribute('@content', ContentHandler.new)
 
-        Elements.define_attribute('remove_if', Elements.define_attribute('if', ContentHandler.new))
-        Elements.define_attribute('remove_unless', Elements.define_attribute('unless', ContentHandler.new))
+        Elements.define_attribute('remove_unless', Elements.define_attribute('if', ConditionalHandler.new(:and)))
+        Elements.define_attribute('remove_if', Elements.define_attribute('unless', ConditionalHandler.new(:or)))
 
         Elements.define_attribute('style', MapHandler.new(separator: ';', format: :dasherize, as_json: false))
         Elements.define_attribute('class', ListHandler.new)
         # Elements.define_attribute('name', FormatHandler.new('[%s]', include_first: false))
 
-        if defined?(Stimulus::Engine)
-          Elements.define_attribute('data-controller', ListHandler.new(nested_separator: '--'))
-          Elements.define_attribute('data-action', ListHandler.new(nested_separator: '#'))
+        ## Stimulus-based attributes handling (values and CSS classes flows through the default handler)
+        Elements.define_attribute('data-controller', ListHandler.new(nested_separator: '--'))
+        Elements.define_attribute('data-action', ListHandler.new(nested_separator: '#'))
 
-          Elements.define_attribute(/\Adata-.*-target\z/, RefHandler.new(format: :lower_camel_case))
-        end
+        Elements.define_attribute(/\Adata-.*-target\z/, RefHandler.new(format: :lower_camel_case))
+        Elements.define_attribute(/\Adata-.*-outlet\z/, RefHandler.new(format: nil))
       end
 
       initializer 'torque-elements.action_view_setup' do

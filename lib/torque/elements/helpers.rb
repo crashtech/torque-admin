@@ -2,6 +2,7 @@
 
 require_relative 'helpers/precompile_helper'
 require_relative 'helpers/ui_helper'
+require_relative 'helpers/formatting'
 
 module Torque
   module Elements
@@ -21,10 +22,10 @@ module Torque
       autoload :Bootstrap
       autoload :Bulma
       autoload :SemanticUI
-      autoload :Tailwind
 
       include PrecompileHelper
       include UiHelper
+      include Formatting
 
       module HookContext
         def in_rendering_context(*)
@@ -40,9 +41,21 @@ module Torque
         false
       end
 
+      def collapse_proc(value)
+        case value
+        when Deferred then value.call(self)
+        when Method then value.call
+        else instance_exec(&value)
+        end
+      end
+
       def render_with_conditions(options)
-        yield unless (FalseClass === options.delete('if')) || (TrueClass === options.delete('unless')) ||
-          (TrueClass === options.delete('remove_if')) || (FalseClass === options.delete('remove_unless'))
+        removed = FalseClass === options.delete('if')
+        removed |= TrueClass === options.delete('unless')
+        removed |= TrueClass === options.delete('remove-if')
+        removed |= FalseClass === options.delete('remove-unless')
+
+        yield unless removed
       end
 
       ## Helpers for changing element-based content and options

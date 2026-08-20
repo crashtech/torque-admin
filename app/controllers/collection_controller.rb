@@ -8,8 +8,8 @@ module Torque
       include BatchController
 
       # Order here is important, as they overload the load_collection method
-      include SortController
       include PaginationController
+      include SortController
       include ScopesController
       include FilterController
 

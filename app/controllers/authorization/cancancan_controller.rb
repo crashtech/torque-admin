@@ -27,18 +27,18 @@ module Torque
           super.accessible_by(current_ability, :show)
         end
 
-        def build_new_record(**, attributes: nil)
+        def build_new_record(attributes: nil, **kwargs)
           if (values = current_ability.attributes_for(action_name.to_sym, admin_resource_class)).present?
             attributes = attributes.nil? ? values : values.deep_merge(attributes)
           end
 
-          super(**, attributes: attributes)
+          super(attributes: attributes, **kwargs)
         end
 
-        def add_inferred_page_action(action_name, **)
-          super(action_name, **, if: -> { can?(action_name.to_sym, authorizable_resource) })
+        def add_page_action(action_name, href = nil, resource = authorizable_resource, **kwargs)
+          condition = -> { can?(action_name.to_sym, resource) }
+          super(action_name, href, **kwargs, '@append' => [{ if: condition }])
         end
-
     end
   end
 end

@@ -2,7 +2,7 @@ PATH
   remote: .
   specs:
     torque-admin (0.1.0.a1)
-      rails (>= 8.1)
+      rails (~> 8.1)
 
 GEM
   remote: https://rubygems.org/

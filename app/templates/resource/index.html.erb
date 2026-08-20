@@ -1,11 +1,7 @@
-<%# locals: (primary_element:, **) -%>
+<%# locals: (primary_element: nil, **) -%>
 
 <!-- Page Actions -->
 <!-- TODO: Improve for compilation -->
 <%%= content_for(:page_actions) { @page_actions.html_safe if defined?(@page_actions) } %>
 
-<%- case primary_element.type -%>
-<%- when :table -%>
-<%-   require_local!(name = primary_element.settings(:as, :table)) -%>
-<%=   primary_element.render %>
-<%- end -%>
+<%%= @primary_element if defined?(@primary_element) %>

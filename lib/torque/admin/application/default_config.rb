@@ -44,8 +44,9 @@ module Torque
         default_authenticated: true,
 
         # The name of the theme to use for the admin application. The default options are: bootstrap, bulma,
-        # semantic_ui, and tailwind. By default, it is set to +tailwind+.
-        theme: 'tailwind',
+        # semantic_ui, and tailwind. Defaults to +semantic_ui+, currently the only theme with a complete
+        # implementation. Flip this back to +tailwind+ once its Admin-side theme lands.
+        theme: 'semantic_ui',
 
         # The extensions to load for the admin theme. You can provide procs to ran under the context of the ui theme
         # class, or modules to be included in the class.
@@ -75,6 +76,10 @@ module Torque
           # Configures the default adapter that will handle resource-based authorization in the admin application. The
           # default options are: cancancan, pundit, torque_admin, or nil to disable
           authorization_adapter: nil,
+
+          # Configures the pagination adapter used by collection controllers. The options are: pagy, kaminari, or nil
+          # to use the built-in offset pagination
+          pagination_adapter: nil,
         ),
       ).freeze
     end

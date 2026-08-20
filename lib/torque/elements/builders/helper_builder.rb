@@ -156,7 +156,7 @@ module Torque
             shared.fetch(as).each { |block| block.call(self) }
 
             if @operations.key?(prop)
-              @operations.insert(2, *@current)
+              @operations[prop].insert(2, *@current)
             else
               operations, @current = @current, []
               start_operation(prop, as_property: true)

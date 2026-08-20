@@ -36,12 +36,12 @@ module Torque
           self
         end
 
-        def render_in(view_context = Context.view_context, &)
+        def render_in(view_context = Context.view_context, reset: false, &)
           return super unless defined?(@template)
 
           with_rendering_context(view_context) do
-            root.content = render_template_body(&)
-            root.render!(outer: render_content_only?)
+            self.content = render_template_body(&)
+            render!(outer: render_content_only?)
           ensure
             @interface.__setobj__(nil)
             @interface = nil
@@ -87,7 +87,7 @@ module Torque
           def prepare_template_interface(locals)
             return SimpleDelegator.new(self) unless @config
 
-            if locals && @config.arity.between(0, 1)
+            if locals && @config.arity.between?(0, 1)
               load_config!(locals)
             else
               load_config!

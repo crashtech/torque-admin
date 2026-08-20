@@ -20,6 +20,14 @@ module Torque
         def append(body)
           Buffer.new("<%= #{body} %>")
         end
+
+        def append_code(body)
+          Buffer.new("<% #{body} %>")
+        end
+
+        def append_condition(condition, body, type: :if)
+          Buffer.new("<%= (#{body}) #{type} #{condition} %>")
+        end
       end
     end
   end

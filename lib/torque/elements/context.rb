@@ -54,7 +54,7 @@ module Torque
 
           append = input['@append']
           inputs.push(*append.reverse) if append.present?
-          yield(input.extract!(*property_list), input)
+          yield(input.extract!(*property_list), input.except('@append'))
         end
       end
     end

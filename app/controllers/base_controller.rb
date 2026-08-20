@@ -22,7 +22,7 @@ module Torque
         prepend_view_path Rails.root.join('app', 'views', admin_application.name.to_s)
         append_view_path Admin::APP_DIR.join('views')
 
-        helper Admin::ApplicationHelper
+        helper Admin::ApplicationHelper, Admin::FormattingHelper
         helper_method :ui_framework, :relative_path_for, :relative_url_for, :route_annotation, :implicit_page_title_for
 
         provide_template_ivars :@primary_element
@@ -153,11 +153,10 @@ module Torque
 
         def initialized_side_controllers
           @_initialized_side_controllers ||= Hash.new do |hash, name|
-            name = name.to_s.camelize
-            name << 'Controller' unless name.end_with?('Controller')
-            next hash[name] if hash.key?(name)
+            klass = admin_application.controller_class(name)
+            next hash[klass] if hash.key?(klass)
 
-            hash[name] = instance = name.constantize.allocate
+            hash[klass] = instance = klass.allocate
             instance.send(:initialize_as_slave_of, self) if instance.respond_to?(:initialize_as_slave_of, true)
             instance
           end

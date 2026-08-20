@@ -5,6 +5,10 @@ module Torque
     module IndexController
       extend ActiveSupport::Concern
 
+      included do
+        helper_method :default_table_actions
+      end
+
       class_methods do
         def generate_table_action_on(action, **, &)
           if action_methods.include?(action.to_s)
@@ -36,16 +40,20 @@ module Torque
           table = @primary_element = assign_table_element(name, state, **options, preset: :index, &)
           table.change(:root, class: [:index_table, action_name])
           table
-
-          # @table.skeleton(rows: 30) if false # TODO: Use when streaming
         end
 
         def assign_table_element(*, **, &)
           @table = TableElement.new(*, **, &)
         end
 
+        def default_table_actions(*list, extras: %i[destroy])
+          list = try(:admin_resource)&.actions&.dig(:member).to_a if list.empty?
+          list = list.map(&:to_s)
 
-
+          actions = (available = action_methods.to_a) & list
+          actions += extras.map(&:to_s) & available
+          actions.map(&:to_sym)
+        end
     end
   end
 end

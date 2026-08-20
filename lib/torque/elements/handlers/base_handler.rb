@@ -13,7 +13,7 @@ module Torque
       end
 
       def collapse(value)
-        value
+        Elements.act_as_proc?(value) ? collapse_proc(value) : value
       end
 
       protected
@@ -24,6 +24,10 @@ module Torque
 
         def format(value)
           @format ? formatter.call(value) : value
+        end
+
+        def collapse_proc(value)
+          view_context.collapse_proc(value)
         end
 
       private

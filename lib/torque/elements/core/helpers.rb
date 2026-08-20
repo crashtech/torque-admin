@@ -8,23 +8,15 @@ module Torque
         extend ActiveSupport::Concern
 
         def settings(key = nil, default = nil)
-          key.nil? ? @root.settings : @root.fetch_setting(key, default)
+          key.nil? ? @settings : fetch_setting(key, default)
         end
 
         def settings?(key)
-          !!@root.settings&.key?(key)
+          !!@settings&.key?(key)
         end
 
         def change_setting(key, value)
-          if @root.settings
-            @root.settings[key] = value
-          else
-            @root.instance_variable_set(:@settings, { key => value })
-          end
-        end
-
-        def element_settings
-          %i[max_depth min_depth]
+          (@settings ||= {})[key] = value
         end
 
         def apply_sorting!(range = nil, by: nil, &block)

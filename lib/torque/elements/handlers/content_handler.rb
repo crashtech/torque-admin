@@ -37,10 +37,8 @@ module Torque
           when Enumerable
             push_iter = current_part == :before ? :each : :reverse_each
             current.send(push_iter) { |value| stack.push([current_part, value]) }
-          when Method
-            stack.push([current_part, current.call])
-          when Proc
-            stack.push([current_part, view_context.instance_exec(&current)])
+          when *PROC_CLASSES
+            stack.push([current_part, collapse_proc(current)])
           when Symbol
             if view_context.respond_to?(current)
               stack.push([current_part, view_context.public_send(current)])

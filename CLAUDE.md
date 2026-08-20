@@ -11,15 +11,26 @@ The gem is early-stage (`0.1.0.a1`): the `Elements` foundation and the `Admin` r
 The gem is organized into three main components:
 
 ### 1. Elements (`lib/torque/elements/`)
-The foundation layer providing Rails enhancements and component-based classes. It includes:
-- `Torque::Elements::Base` and its `Core::*` mixins (`Index`, `Nodes`, `Render`, `Template`, `Helpers`, `Definition`) — node tree, indexing, rendering, and template support
-- A node-based architecture for component composition (`Node`, `ColumnNode`, `LinkNode`)
+The foundation layer providing Rails enhancements and component-based classes. Since the
+Project 1 unification (2026-08), elements and nodes are one inheritance spine:
+`BasicNode` (physical: tag + options + children + explicit `parent`/`element` refs, no
+variants; rendering organized in `BasicNode::BasicRender`) → `Node` (logical: id,
+settings, i18n; variations like `LinkNode`) → `Base` (the element — its own root, with a
+classification DSL, lazy per-element index, config-block loading). Any `Base` declared
+through the controller `element` DSL is application-reachable. It includes:
+- A classification DSL (`node :item, as: :link` / `node :divider, as: :basic` /
+  `setting :sort, ...`) — `as:` resolves through `Node::TYPES` or takes a Class, defaulting
+  to `Node` — generating child DSL methods into an auto-included module
+  (override + `super` works)
+- Direct-helper render dispatch: element method `render_#{type}` → view helper
+  `render_#{name}` → `ui.#{name}` (name convention `#{element.type}_#{node.type}`) — no
+  handler chains
 - Handlers for attribute-value merging/serialization (content, conditional, format, list, map, ref)
 - Builders for aliases and helpers (`AliasBuilder`, `HelperBuilder`, compiled via `HelperConstructor`)
 - `Context` (request-scoped `CurrentAttributes`) and a pluggable UI-framework system (`UiBuilder`)
 - A `Frame` system — a layout-between-the-layout mechanism resolved to `app/views/frames/*.html.erb`
 
-See `knowledge-base/elements-architecture.md` for details.
+See `knowledge-base/elements-architecture.md` for details, and `projects/01-node-element-unification.md` for the settled design.
 
 ### 2. Forms (`lib/torque/forms/`)
 This layer is a **stub**. `lib/torque/forms.rb` only declares autoloads for `Base` and `Element`; `Torque::Forms::Base` has no backing file (referencing it raises a `LoadError`). `Torque::Forms::Element` is a thin `Torque::Elements::Base` subclass that adds icon-related settings for form buttons — there are no input types, no validation integration, and no Rails form-helper integration yet. See `knowledge-base/forms-architecture.md`.
@@ -58,13 +69,14 @@ See `knowledge-base/controller-structure.md` for the full, file-by-file breakdow
 
 ### Elements
 Pre-built UI components (`app/elements/*.rb`):
-- `BaseElement` — explicit placeholder (`# TODO: This is just a placeholder right now`); adds one setting (`:placement`) over `Elements::Base`
-- `ButtonsElement` — fully implemented (groups, icons, dividers, link-based buttons)
-- `BreadcrumbElement` — fully implemented; most of its power comes from the `Torque::Admin::ItemsFromAction` concern (auto-imports breadcrumb trail from the current controller/action)
-- `MenuElement` — fully implemented; most of its power comes from the `Torque::Admin::ItemsFromRouter` concern (auto-imports menu structure by walking the Rails route set)
-- `TableElement` — implemented for column/row/selection definition, but its `ColumnNode#content_from_helper`/`#content_from_method` paths are broken/empty (only the default array-accessor path works); pagination is not implemented despite being commonly assumed; a trailing comment block sketches unimplemented future DSL (`row_number`, `actions`, `footer`)
+- `BaseElement` — abstract base for admin elements
+- `ButtonsElement` — converted to the unified core (classification DSL, `render_button` element hook); groups, icons, dividers, link-based buttons
+- `BreadcrumbElement` — converted to the unified core; most of its power comes from the `Torque::Admin::ItemsFromAction` concern (auto-imports breadcrumb trail from the current controller/action)
+- `MenuElement` — converted to the unified core (`MenuElement::ItemNode` computes logical flags; `Helpers::SemanticUI#menu_entry` does the physical composition); most of its power comes from the `Torque::Admin::ItemsFromRouter` concern (auto-imports menu structure by walking the Rails route set)
+- `PaginationElement` (`< ButtonsElement`; `per` as a second node type) — first/prev/pages/next/last and per-page buttons over a `Torque::Admin::Pagination` (built-in, `Pagination::Pagy`, `Pagination::Kaminari` via `config.resources.pagination_adapter`; `apply(scope)`); embedded by the table by default
+- `TableElement` — on the unified core since 2026-08-16 (`projects/04-table-element.md`, stages 1–4): `node :column, as: :column, renders: false, parts: %i[col header cell footer]` with pull-based cached parts and zero nodes per cell; footers (`aggregate:`/`all:`), `each_row` (via `Elements::Deferred`), row `actions` (`t.actions :show, :edit do |a, entry| … end` — a nested `ButtonsElement` rendered per row through `Base#render_in(reset: true)`, per-entry leaves as `Elements::Deferred`/Procs closing over a `SimpleDelegator` entry proxy, collapsed by `view_context.collapse_proc`), sortable headers (`?sort[key]=asc`, merged into current params). `as:` symbols resolve through the view `formatter` proxy (Project 3, landed 2026-08-17: `Torque::Elements::Formatter`, `format_as_*` view helpers declared with `Formatter::Declarations#formatter/formatters`, `formatter_for` inference, `Helpers::Formatting` pack + admin `record`/`count`). `selection`/`row_number` not yet.
 
-See `knowledge-base/element-components.md`.
+See `knowledge-base/element-components.md` (updated post-unification) and `knowledge-base/ui-builder-and-helpers.md` for how elements' `ui.*` dispatch targets are built.
 
 ## Usage
 

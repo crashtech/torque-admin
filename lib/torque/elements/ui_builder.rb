@@ -14,8 +14,6 @@ module Torque
 
       CONTENT_OPTIONS = (ContentHandler::PARTS - [:content]).map(&:to_s).map(&:freeze).freeze
       SPECIAL_OPTIONS = {
-        '@node' => :noop,
-        '@element' => :noop,
         '@content' => :flatten_content_option,
         '@append' => :flatten_append_option,
         '@controller' => :flatten_controller_option,

@@ -4,12 +4,12 @@ module Torque
   module Elements
     # = Torque Elements \Link Node
     class LinkNode < Node
-      self.settings += %i[href remove_if_invalid]
+      setting :href, :remove_if_invalid
 
       def active?(path = options[:href])
         return @active if defined?(@active)
-        return unless path.present? && defined?(@element)
-        return unless (setting = @element.try(:current_link_setting))
+        return unless path.present? && element
+        return unless (setting = element.try(:current_link_setting))
 
         helper = TrueClass === setting ? :current_page? : setting
         helper = Context.view_context.method(helper) unless helper.respond_to?(:call)
@@ -20,6 +20,7 @@ module Torque
 
       def href
         return if (current = fetch_setting(:href)).nil?
+        return options[:href] = current if Elements.act_as_proc?(current)
 
         path = current if current.is_a?(String)
         path ||= Rails.error.handle(ActionController::UrlGenerationError, severity: :info) do

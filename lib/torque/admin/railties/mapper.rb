@@ -376,9 +376,11 @@ module Torque
           case annotation(:type)
           when :action
             return super if parent.scope_level == :new
-            [prefix, name_prefix, collection_name]
+
+            source = parent.parent.scope_level == :member ? member_name : collection_name
+            [prefix, name_prefix, source]
           when :widget
-            source = parent.scope_level == :member ? member_name : collection_name
+            source = scope_level == :member ? member_name : collection_name
             [name_prefix, source, prefix]
           else super
           end
@@ -387,16 +389,20 @@ module Torque
         private
 
           def annotate_resource(instance, controller, action)
+            modules = @hash[:module]
             app = annotation(:admin_application)
-            name = -[*@hash[:module], instance.singular].join('/')
+            name = -[*modules, instance.singular].join('/')
 
             resource = app.fetch_resource(name)
             resource.enhance_from_route(self, action.to_s)
+
+            modules, controller = @hash[:module].first, 'simple' if instance.simple?
+            controller_name = [*modules, "#{controller}_controller"].join('/')
+
+            resource.add_resource_path(action.to_s, controller_name, @hash[:nested_resources])
             return resource if instance.simple?
 
-            controller = [*@hash[:module], "#{controller}_controller"].join('/').classify
-            app.setup_controller(controller, resource, instance.param)
-
+            app.setup_controller(controller_name.classify, resource, instance.param)
             nil
           end
       end

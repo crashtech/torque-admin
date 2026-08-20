@@ -4,16 +4,16 @@ module Torque
   module Admin
     # = Torque Admin \Buttons Element
     class ButtonsElement < BaseElement
-      def type = :buttons
+      node :button, as: :link
+      node :group
+      node :divider, as: :basic
 
-      def element_settings
-        super + %i[sort icons icons_only]
-      end
+      setting :sort, :icons, :icons_only
 
       ## Define nodes
 
       def group(identifier, label = nil, **options, &)
-        add_node(identifier, :group, options.reverse_merge(label: label || identifier), &)
+        super(identifier, **options.reverse_merge(label: label || identifier), &)
       end
 
       def item(identifier, href_or_label, href = nil, **options, &)
@@ -25,16 +25,16 @@ module Torque
         options[:icon] ||= icon if icon
         options[:label] ||= href_or_label || identifier unless icons_only?
 
-        add_node(identifier, :button, options, node_type: :link, &)
+        button(identifier, **options, &)
       end
 
-      alias button item
+      ## Renders
 
-      def divider
-        add_node(nil, :divider)
+      def render_button(node, content, **options)
+        node.dispatch_render(content, grouped: !node.parent.equal?(self), **options)
       end
 
-      ## Renderer
+      ## Overrides
 
       def titlelize_text_for?(key, node)
         key == :label

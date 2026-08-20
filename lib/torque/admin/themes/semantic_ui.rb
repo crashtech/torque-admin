@@ -65,8 +65,8 @@ module Torque
         end
 
         ## Extra Elements
-        def buttons_button(*, **kwargs)
-          kwargs[:@node].parent =~ :root ? button(*, **kwargs) : menu_item(*, **kwargs)
+        def buttons_button(*, grouped: false, **kwargs)
+          grouped ? menu_item(*, **kwargs) : button(*, **kwargs)
         end
 
         def buttons_group(content, as: :div, **kwargs)

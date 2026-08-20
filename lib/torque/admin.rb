@@ -19,11 +19,12 @@ module Torque
 
     autoload :LazyConstants
     autoload :CollectionState
+    autoload :Pagination
 
     autoload_under :concerns do
       autoload :ItemsFromAction
       autoload :ItemsFromRouter
-      autoload :RowsFromEntries
+      autoload :TableSummaries
     end
 
     # = Torque Admin \Themes
@@ -62,14 +63,11 @@ module Torque
 
       app_autoload :ResourceController
       app_autoload :DashboardController
-      app_autoload :SimpleController
 
       app_autoload :CollectionController
       app_autoload :MemberController
 
       app_autoload :CancancanController, 'authorization'
-      app_autoload :PunditController, 'authorization'
-      app_autoload :AuthorizationController, 'authorization'
 
       app_autoload :FilterController, 'collection'
       app_autoload :ScopesController, 'collection'
@@ -87,9 +85,11 @@ module Torque
       app_autoload :ButtonsElement
       app_autoload :BreadcrumbElement
       app_autoload :MenuElement
+      app_autoload :PaginationElement
       app_autoload :TableElement
 
       app_autoload :ApplicationHelper
+      app_autoload :FormattingHelper
     end
   end
 end

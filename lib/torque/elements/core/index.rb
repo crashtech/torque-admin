@@ -4,27 +4,31 @@ module Torque
   module Elements
     module Core
       # = Torque Elements \Core Index
+      #
+      # Each element hosts its own lazy index of identified nodes, obfuscated from parents.
+      # Nested elements are entries in their parent's index; their internals are not.
+      # Reaching in uses varargs: +fetch(:address, :street)+.
       module Index
         extend ActiveSupport::Concern
 
         def index
           return @index if defined?(@index)
 
-          @index = { root: @root }
+          @index = {}
           load_config!
           @index
         end
 
         def [](key)
-          key == :root ? @root : index[node_id(key)]
+          key == :root ? self : index[node_id(key)]
         end
 
-        def fetch(key)
-          return @root if key == :root
-
-          index.fetch(node_id(key)) do
+        def fetch(key, *rest)
+          node = key == :root ? self : index.fetch(node_id(key)) do
             raise KeyError, "Key not found: #{key.inspect}"
           end
+
+          rest.empty? ? node : node.fetch(*rest)
         end
 
         def key?(key)
@@ -51,7 +55,7 @@ module Torque
           end
 
           def unindex_node(node)
-            index.delete(node.id)
+            index.delete(node.id) if node.respond_to?(:id)
           end
 
           def reindex(node, as)
@@ -60,9 +64,9 @@ module Torque
           end
 
           def ref_to_node(value)
-            return @root if value == :root
-            return value if value.is_a?(Node)
-            return @current || @root if value.eql?(true)
+            return self if value == :root
+            return value if value.is_a?(BasicNode)
+            return @current || self if value.eql?(true)
 
             fetch(value)
           end

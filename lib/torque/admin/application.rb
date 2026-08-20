@@ -6,7 +6,7 @@ module Torque
   module Admin
     # = Torque Admin \Application
     class Application
-      attr_reader :name, :config, :engine, :mod, :auth_resources
+      attr_reader :name, :config, :engine, :mod, :auth_resources, :resources
 
       delegate :title, to: :config
 
@@ -47,6 +47,7 @@ module Torque
       def clear
         @resources = {}
         @auth_resources = {}
+        @controllers = {}
         @ui_builder = nil
         @base_controller = nil
         @engine.mounted = false
@@ -54,8 +55,19 @@ module Torque
       end
 
       def finalize_routes!
-        @_controllers = nil
+        @controllers = {}
         auto_dashboard_route
+        register_polymorphic_mappings
+      end
+
+      def register_polymorphic_mappings(routes = engine.routes)
+        @resources.each_value do |resource|
+          next if resource.controllers.empty?
+
+          routes.add_polymorphic_mapping(resource.resource_name, {}) do |record, options|
+            resource.member_url_options!(record).merge(options)
+          end
+        end
       end
 
       def auto_dashboard_route(routes = engine.routes)
@@ -72,9 +84,20 @@ module Torque
         @resources[name] ||= mod::Resource.new(name)
       end
 
-      def setup_controller(controller, resource, param)
-        return unless (@_controllers ||= Set.new).add?(controller)
+      def controller_class(name)
+        (@controllers ||= {})[name] ||= begin
+          class_name = name.to_s.delete_prefix('/').camelize
+          class_name = "#{class_name}Controller" unless class_name.end_with?('Controller')
+          class_name == name ? class_name.constantize : controller_class(class_name)
+        end
+      end
 
+      def setup_controller(controller, resource, param)
+        controllers = (@controllers ||= {})
+        return if controllers.key?(controller)
+
+        controllers[controller] = nil
+        resource.controllers << controller
         Rails.autoloaders.main.on_load(controller) do |klass, *|
           klass.admin_resource = resource
           klass.identified_by = klass.primary_param = param
@@ -123,8 +146,8 @@ module Torque
           base = config.parent_module!.constantize
 
           mod_name = name.to_s.camelize.to_sym
-          mod = base.const_defined?(mod_name) ? base.const_get(mod_name) : base.const_set(mod_name, Module.new)
-          raise ArgumentError, <<~MSG if mod.const_defined?(:Engine)
+          mod = base.const_defined?(mod_name, false) ? base.const_get(mod_name) : base.const_set(mod_name, Module.new)
+          raise ArgumentError, <<~MSG if mod.const_defined?(:Engine, false)
             The module #{mod.name} already has a constant named Engine.
             Please remove it or choose a different name for your application.
           MSG

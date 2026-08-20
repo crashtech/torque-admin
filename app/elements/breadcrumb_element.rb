@@ -13,11 +13,10 @@ module Torque
       alias label_for action_label_for
       alias import_from_current_action import_items_from_current_action
 
-      def type = :breadcrumb
+      node :item, as: :link
+      node :divider, as: :basic
 
-      def element_settings
-        super + %i[auto_dividers]
-      end
+      setting :auto_dividers
 
       ## Define nodes
 
@@ -41,17 +40,17 @@ module Torque
         options[:href] ||= href
         options[:label] ||= href_or_label || identifier
 
-        add_node(identifier, :item, options, node_type: (:link if options[:href]), &)
+        super(identifier, **options, &)
       end
 
       alias import_item item
 
       def divider(content = nil)
-        add_node(nil, :divider, { prepend: content || divider_content || '/' })
+        super(prepend: content || divider_content || '/')
       end
 
       def pop
-        remove(root.children.last)
+        remove(children.last)
       end
 
       ## Others

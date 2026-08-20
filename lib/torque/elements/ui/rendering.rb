@@ -20,7 +20,7 @@ module Torque
           view_context.render_with_conditions(options) do
             left, *inner, right = options.delete('@content')&.values_at(*ContentHandler::PARTS)
             content = view_context.safe_join(inner.flatten) if with_content && inner.present?
-            content = tag_builder.content_tag_string(tag_name, content, options)
+            content = tag_builder.public_send(tag_name, *content, **options)
             return content if left.nil? && right.nil?
 
             view_context.safe_join([*left, content, *right])

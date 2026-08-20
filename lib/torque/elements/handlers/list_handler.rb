@@ -25,7 +25,7 @@ module Torque
           end
         end
 
-        result.join(@separator)
+        result.join(@separator).presence
       end
 
       def each_value(input, prefix: '', &)
@@ -45,6 +45,8 @@ module Torque
             yield(current, current_prefix.chomp(@nested_separator)) unless current_prefix.empty?
           when Symbol
             stack.push([deref(current), current_prefix])
+          when *PROC_CLASSES
+            stack.push([collapse_proc(current), current_prefix])
           else
             str = current.to_s
             if str.include?(@separator)

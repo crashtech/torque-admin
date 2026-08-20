@@ -5,15 +5,6 @@ module Torque
     # = Torque Elements \UI Defaults Helpers
     class UiBuilder
       module Defaults
-        def node_render_names(node, element = nil)
-          return [-element.name.to_s, -element.type.to_s] if element && node =~ :root
-
-          result = []
-          result += [-"#{element.name}_#{node.type}", -"#{element.type}_#{node.type}"] if element
-          result << -node.type.to_s
-          result
-        end
-
         def menu_sections_for(menu)
           [route_annotation(:section)] if menu == :main_menu && current_frame == 'frames/modern'
         end
@@ -30,11 +21,42 @@ module Torque
           render_content_tag(as, nil, options, &)
         end
 
+        ## Pagination
+
+        def pagination(content = nil, **options, &)
+          render_content_tag('nav', content, [{ aria: { label: 'pagination' } }, options], &)
+        end
+
+        def pagination_button(content = nil, grouped: false, active: false, disabled: false, href: nil, **options)
+          tag_name = disabled || href.nil? ? 'span' : 'a'
+          state = { href: (href unless disabled), aria: { current: ('page' if active), disabled: (true if disabled) } }
+          render_content_tag(tag_name, content, [state, options])
+        end
+
+        def pagination_per(*, **)
+          pagination_button(*, **)
+        end
+
         ## Table
 
-        def table(content = nil, **options, &)
-          defaults = { id: options[:@node]&.id, border: 0, cellpadding: 0, cellspacing: 0 }
-          render_content_tag('table', content, [defaults, options], &)
+        def table(content = nil, sortable: false, **options, &)
+          render_content_tag('table', content, [{ border: 0, cellpadding: 0, cellspacing: 0 }, options], &)
+        end
+
+        def table_colgroup(content = nil, **options, &)
+          render_content_tag('colgroup', content, [options], &)
+        end
+
+        def table_thead(content = nil, **options, &)
+          render_content_tag('thead', content, [options], &)
+        end
+
+        def table_tbody(content = nil, **options, &)
+          render_content_tag('tbody', content, [options], &)
+        end
+
+        def table_tfoot(content = nil, **options, &)
+          render_content_tag('tfoot', content, [options], &)
         end
 
         def table_row(content = nil, **options, &)
@@ -45,15 +67,23 @@ module Torque
           render_content_tag('td', content, [options], &)
         end
 
-        def column_header(content, label: nil, **options)
-          id = options[:@node]&.id
-          render_content_tag('th', content || label, [{ class: ("col-#{id}" if id) }, options])
+        def table_column_col(stretch: false, width: nil, **options)
+          size = width ? { style: { width: } } : settings[stretch ? :default_col_stretch : :default_col_size]
+          render_tag('col', [size, options])
         end
 
-        def column_col(*, stretch: false, **options)
-          id = options[:@node]&.id
-          size = settings[stretch ? :default_col_stretch : :default_col_size]
-          render_tag('col', [{ class: ("col-#{id}" if id) }, size, options])
+        def table_column_header(content, sortable: false, direction: nil, href: nil, **options)
+          content = view_context.link_to(content, href) if sortable && href
+          aria = { aria: { sort: "#{direction}ending" } } if direction
+          render_content_tag('th', content, [aria, options])
+        end
+
+        def table_column_cell(content, **options)
+          render_content_tag('td', content, [options])
+        end
+
+        def table_column_footer(content, **options)
+          render_content_tag('td', content, [options])
         end
 
         protected

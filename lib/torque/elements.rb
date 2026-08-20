@@ -13,25 +13,30 @@ module Torque
     # instead of hard-coding the translation text in the generated view file
     mattr_accessor :i18n_safe_template, instance_accessor: false, default: false
 
+    mattr_accessor :formatter_prefix, instance_accessor: false, default: 'format_as_'
+    mattr_accessor :wrapper_prefix, instance_accessor: false, default: 'wrap_as_'
+
     autoload :Frame
     autoload :Templates
     autoload :Controller
 
     autoload :Base
+    autoload :BasicNode
     autoload :Node
     autoload :Registry
     autoload :Traverse
 
-    autoload :Component
-
-    autoload :Accessors
     autoload :Context
+    autoload :Deferred
+    autoload :Formatter
+    autoload :ValueReader
     autoload :Helpers
     autoload :UiBuilder
     autoload :HelperConstructor
 
     autoload_under :handlers do
       autoload :BaseHandler
+      autoload :ConditionalHandler
       autoload :ContentHandler
       autoload :FormatHandler
       autoload :ListHandler
@@ -49,7 +54,13 @@ module Torque
       autoload :HelperBuilder
     end
 
+    PROC_CLASSES = [Proc, Method, Deferred].freeze
+
     class << self
+      def act_as_proc?(value)
+        PROC_CLASSES.any? { |klass| value.is_a?(klass) }
+      end
+
       def debug_templates!(path = Rails.root.join('tmp', 'templates'))
         Templates::UnboundTemplate.redefine_method(:save_sources_on) { path }
         Elements.const_set(:DEBUG_TEMPLATES, true)
@@ -73,9 +84,13 @@ module Torque
       end
 
       def attribute_name(name)
-        return name if name.is_a?(::String) && name.frozen?
+        return name if name.is_a?(::String) && name.frozen? && !name.match?(/[^-a-z0-9]/)
 
-        name.to_s.underscore.dasherize.freeze
+        attribute_names.compute_if_absent(name) { -name.to_s.underscore.dasherize }
+      end
+
+      def attribute_names
+        @attribute_names ||= Concurrent::Map.new
       end
 
       def define_attribute(name, handler)

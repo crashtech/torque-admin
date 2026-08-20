@@ -4,18 +4,12 @@ module Torque
   module Elements
     module Core
       # = Torque Elements \Core Render
+      #
+      # The render pass of an element. Rendering state is shared tree-wide: a child element
+      # born from a parent adopts the parent's state object, so guards work everywhere while
+      # memory stays flat. The +rendered+ state is only set after the pass completes.
       module Render
         extend ActiveSupport::Concern
-
-        included do
-          class_attribute :custom_renders, instance_accessor: false, default: {}.freeze
-        end
-
-        class_methods do
-          def custom_render_for(type, &block)
-            self.custom_renders = self.custom_renders.merge(type => block).freeze
-          end
-        end
 
         def render_content_only!
           @render_content_only = true
@@ -25,62 +19,49 @@ module Torque
           defined?(@render_content_only) && @render_content_only
         end
 
-        def custom_render_for(type, &block)
-          render_methods[type.to_sym] = block
-        end
-
-        def render_in(view_context = Context.view_context, &)
+        def render_in(view_context = Context.view_context, reset: false, &)
           load_config! unless block_given?
+          reset_render! if reset && defined?(@rendered)
           with_rendering_context(view_context) do
             load(&) if block_given?
-            root.render!(outer: render_content_only?)
+            render!(outer: render_content_only?)
           end
+        end
+
+        def render(outer: false)
+          return render_in unless rendering?
+
+          load_config!
+          super
         end
 
         def content_of(node, outer: false)
-          (node.is_a?(Node) ? node : fetch(node)).render(outer:)
+          (node.is_a?(BasicNode) ? node : fetch(node)).render(outer:)
         end
 
         def render_handler_for(node)
-          render_methods[render_cache_key_for(node)] ||= fetch_render_for(node)
+          cache = (@render_methods ||= {})
+          key = [node.type, node.render_name]
+          cache.fetch(key) { cache[key] = node.resolve_render_handler(self) }
         end
-
-        def postamble_root_content(content)
-          content
-        end
-
-        protected
-
-          def fetch_render_for(node)
-            if (custom = self.class.custom_renders[node.type])
-              ->(*args, **kwargs) { Context.view_context.instance_exec(*args, **kwargs, :@element => self, &custom) }
-            else
-              render_methods[node.type] || node.class.render_handler_for(node, self)
-            end
-          end
 
         private
 
-          def with_rendering_context(view_context, &)
-            @state << 'rendering' << 'rendered'
+          def with_rendering_context(view_context)
+            owner = @state.add?('rendering')
 
-            if view_context != Context.view_context
-              yield
-            else
-              Context.with(view_context:, &)
-            end
+            result =
+              if view_context.equal?(Context.view_context)
+                yield
+              else
+                Context.with(view_context:) { yield }
+              end
+
+            @state << 'rendered'
+            result
           ensure
-            @state.delete('rendering')
+            @state.delete('rendering') if owner
           end
-
-          def render_cache_key_for(node)
-            [node.type, node.class, type]
-          end
-
-          def render_methods
-            @render_methods ||= {}
-          end
-
       end
     end
   end

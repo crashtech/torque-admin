@@ -42,7 +42,10 @@ module Torque
         end
 
         def flatten_append_option(value, &)
-          value.each { |append| flatten_options!(append, &) }
+          value.each do |append|
+            append = view_context.collapse_proc(append) if Elements.act_as_proc?(append)
+            flatten_options!(append, &)
+          end
         end
 
         def flatten_controller_option(value, &)

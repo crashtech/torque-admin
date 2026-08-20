@@ -11,7 +11,7 @@ module Torque
         class_attribute :element_aliases, instance_accessor: false, instance_predicate: false, default: {}.freeze
         private_class_method :element_settings=, :element_aliases=
 
-        helper_method :node_render_names, :element_class_for, :element_class_name, :elements_i18n_keys_for
+        helper_method :element_class_for, :element_class_name, :elements_i18n_keys
         delegate :element_class_name, :element_class_for, to: :class
       end
 
@@ -60,13 +60,6 @@ module Torque
           def sanitized_element_name(name)
             name.is_a?(::String) ? name.to_s.underscore.to_sym : name
           end
-      end
-
-      def node_render_names(node, element = nil)
-        return unless element
-        return [-"render_#{element.name}"] if node =~ :root
-
-        [-"render_#{element.name}_#{node.type}", -"render_#{element.type}_#{node.type}"]
       end
 
       def elements_i18n_keys

@@ -25,9 +25,8 @@ Gem::Specification.new do |spec|
 
   spec.required_ruby_version = '>= 3.2.0'
 
-  spec.files        = Dir['LICENSE.txt', 'lib/**/*', 'sig/**/*', 'Rakefile']
-  spec.test_files   = Dir['spec/**/*']
+  spec.files        = Dir['LICENSE.txt', 'README.md', 'app/**/*', 'lib/**/*', 'sig/**/*', 'Rakefile']
   spec.rdoc_options = ['--title', 'Torque Admin']
 
-  spec.add_dependency 'rails', '>= 8.1'
+  spec.add_dependency 'rails', '~> 8.1'
 end

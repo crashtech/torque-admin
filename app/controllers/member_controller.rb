@@ -23,9 +23,9 @@ module Torque
         alias_method :resource, :member
         alias_method :load_resource, :member
 
-        def find_member!(id = params[self.class.primary_param], scope: scoped_resource, by: self.class.identified_by)
-          by ||= scope.model.primary_key
-          scope.find_sole_by(by => id)
+        def find_member!(id = params[self.class.primary_param], scope: nil, by: nil)
+          scope = scoped_resource if scope.nil?
+          scope.find_sole_by((by || self.class.identified_by || scope.model.primary_key) => id)
         end
 
         # Internal methods

@@ -4,43 +4,56 @@ module Torque
   module Elements
     module Core
       # = Torque Elements \Core Definition
+      #
+      # The definition lifecycle of an element: construction, config-block loading, node
+      # building, and composition. Loading state (+loading?+/+loaded?+) is per element,
+      # while rendering state is shared tree-wide (see Core::Render).
       module Definition
         extend ActiveSupport::Concern
 
-        attr_reader :name, :options, :state, :root
+        attr_reader :name, :state
 
-        delegate :id, to: :root
-
-        %i[initiated? loading? loaded? rendering? rendered?].each do |state_method|
+        %i[initiated? rendering? rendered?].each do |state_method|
           define_method(state_method) { @state.include?(state_method.to_s.chomp('?')) }
         end
 
-        def initialize(name, *args, **options, &config)
+        def initialize(name = nil, *args, **options, &config)
           raise NotImplementedError, +'Cannot instantiate an abstract class' if self.class.abstract_class?
 
           @name = name
           @state = Set.new
           @config = config
-          @root = build_root_node(args, options)
 
-          super()
+          super(node_id(name), self.class.element_type, **args.grep(Symbol).product([true]).to_h.merge(options))
           @state << 'initiated'
+        end
+
+        def loading?
+          defined?(@loading) && @loading
+        end
+
+        def loaded?
+          defined?(@loaded) && @loaded
         end
 
         def load_config!(*)
           return self if loading? || loaded?
 
-          @state << 'loading'
-          load(*, &@config) if @config
+          # why: loading is tracked per element instead of in @state because @state is shared with nested
+          # elements, and a child loading its definition must not read as the parent loading
+          begin
+            @loading = true
+            load(*, &@config) if @config
+            @loaded = true
+          ensure
+            @loading = false
+            @config = nil
+          end
 
-          @state << 'loaded'
           self
-        ensure
-          @state.delete('loading')
-          @config = nil
         end
 
-        def load(*, into: @root, &)
+        def load(*, into: self, &)
           @interface = SimpleDelegator.new(self)
           nest_content(into, *, &)
           self
@@ -49,32 +62,24 @@ module Torque
           @current = nil
         end
 
-        def type
-          raise NotImplementedError, +'Subclasses must implement the #type method'
-        end
-
-        def of_type?(value)
-          value.is_a?(Array) ? type.in?(value) : type == value
-        end
-
-        alias =~ of_type?
-
         def within(node, &)
-          nest_content(node.is_a?(Node) ? node : fetch(node), &)
+          nest_content(node.is_a?(BasicNode) ? node : fetch(node), &)
         end
 
-        def change(identifier, **)
-          fetch(identifier).change(**)
+        def change(identifier = self, **options)
+          node = identifier.is_a?(BasicNode) ? identifier : fetch(identifier)
+          node.equal?(self) ? super(options) : node.change(options)
         end
 
-        def change!(identifier, **)
-          fetch(identifier).change!(**)
+        def change!(identifier = self, **options)
+          node = identifier.is_a?(BasicNode) ? identifier : fetch(identifier)
+          node.equal?(self) ? super(options) : node.change!(options)
         end
 
         def remove(node)
-          raise(+'Cannot remove node after it has been rendered') if rendered?
+          assert_mutable!
 
-          node = fetch(node) unless node.is_a?(Node)
+          node = fetch(node) unless node.is_a?(BasicNode)
           unindex_node(node)
           shift_node(node)
         end
@@ -82,37 +87,39 @@ module Torque
         alias delete remove
 
         def import(other, from: :root, into: :root)
-          return import_nodes(other, nil, into) if other.is_a?(Array)
-          return import_nodes([other], other, into) if other.is_a?(Node)
+          return import_nodes(other, into) if other.is_a?(Array)
+          return import_nodes([other], into) if other.is_a?(BasicNode) && !other.is_a?(Base)
 
           other = Context.registry[other] unless other.is_a?(Base)
           raise ArgumentError, "Expected an element definition, got #{other.class.name}" unless other.is_a?(Base)
 
           from = other.fetch(from)
-          import_nodes(from =~ :root ? from.children : [from], from, into)
+          import_nodes(from.equal?(other) ? from.children : [from], into)
         end
 
         protected
 
-          def build_root_node(args, options)
-            build_node(@name, :root, args.grep(Symbol).product([true]).to_h.merge(options))
+          def assert_mutable!
+            return unless (rendering? || rendered?) && !loading?
+
+            raise +"Cannot change the '#{name || type}' element after it has been rendered"
           end
 
-          def build_node(id, type, options = nil, node_type: Node)
-            klass = node_type.is_a?(Class) && node_type <= Node ? node_type : Node::CLASS_TYPES[node_type]&.constantize
-            raise ArgumentError, "Invalid node type: #{node_type}" if klass.nil?
-
-            klass.new(node_id(id), type, **options, :@element => self)
+          def build_node(id, type, options = nil, klass: Node)
+            node = klass.new(node_id(id), type, **(options || {}))
+            node.parent = @current || self
+            node.element = self
+            node
           end
 
-          def add_node(id, type, options = nil, node_type: nil, &)
-            node = build_node(id, type, options, node_type: node_type || Node)
+          def add_node(id, type, options = nil, klass: Node, &)
+            node = build_node(id, type, options, klass:)
             add_node!(node)
             nest_content(node, &) if block_given?
             node
           end
 
-          def nest_content(node = @root, *, &block)
+          def nest_content(node = self, *, &block)
             @current = node
 
             if !loading? && rendering?
@@ -120,7 +127,7 @@ module Torque
             elsif loading? && block.arity == 0
               @interface.instance_eval(&block)
             else
-              yield(@interface, *)
+              yield(@interface || self, *)
             end
 
             node
@@ -128,25 +135,49 @@ module Torque
             @current = node.parent
           end
 
-          def add_node!(node)
-            return if rendered?
+          def add_node!(node, index: true, force: false)
+            assert_mutable! unless force
 
             append_node(node)
-            index_node(node) if node.id
+            index_node(node) if index && node.respond_to?(:id) && node.id
+            node
           end
 
-          def import_nodes(list, base, into)
+          def import_nodes(list, into)
             load_config!
 
-            nodes = ref_to_node(into).children
-            # TODO: This doesn't work because we need to copy children and set parents accordingly after dup
-            # traverse(list) do |node|
-            #   new_node = node.dup
-            #   new_node.instance_variable_set(:@element, self)
+            target = ref_to_node(into)
+            list.each do |node|
+              copy = deep_copy_node(node)
+              copy.parent = target
+              target.children << copy
+              index_imported_node(copy)
+            end
+          end
 
-            #   index_node(node)
-            #   nodes << node if node.parent == base
-            # end
+        private
+
+          def deep_copy_node(node, owner = self)
+            copy = node.dup
+            copy.element = owner
+            copy.instance_variable_set(:@state, @state) if copy.is_a?(Base)
+            return copy unless node.branch?
+
+            owner = copy if copy.is_a?(Base)
+            node.children.each do |child|
+              child_copy = deep_copy_node(child, owner)
+              child_copy.parent = copy
+              copy.children << child_copy
+            end
+
+            copy
+          end
+
+          def index_imported_node(node)
+            index_node(node) if node.respond_to?(:id) && node.id
+            return if node.is_a?(Base) || node.leaf?
+
+            node.children.each { |child| index_imported_node(child) }
           end
       end
     end
